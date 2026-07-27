@@ -112,6 +112,7 @@
       <a class="nav" data-view="projets"><span class="ic">🎯</span> Projets</a>
       <a class="nav" data-view="taches"><span class="ic">✅</span> Tâches</a>
       <a class="nav" data-view="finances"><span class="ic">💶</span> Finances</a>
+      <a class="nav" data-view="treso"><span class="ic">💰</span> Trésorerie</a>
       <div class="spacer"></div>
       <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
     </aside>
@@ -257,12 +258,12 @@ document.getElementById('addbtn').onclick=()=>{
 /* ───── BOOT ───── */
 async function boot(){
   try{ cacheOrgs=await sb('organisations?select=*&order=nom'); }catch(e){ cacheOrgs=[]; }
-  try{ cacheContacts=await sb('contacts?select=*&order=nom'); }catch(e){ cacheContacts=[]; }
+  try{ cacheContacts=await sb('contacts?select=*&order=nom&limit=5000'); }catch(e){ cacheContacts=[]; }
   render();
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances'};
+const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie'};
 const el=id=>document.getElementById(id);
 function render(){
   el('title').textContent=TITLES[view]||'HUB';
@@ -273,6 +274,7 @@ function render(){
   if(view==='projets')return renderProjets();
   if(view==='taches')return renderTaches();
   if(view==='finances')return renderFinances();
+  if(view==='treso')return renderTreso();
   if(view==='cockpit')return renderCockpit();
 }
 function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
@@ -293,7 +295,7 @@ async function renderContacts(){
   fl.querySelectorAll('[data-r]').forEach(c=>c.onclick=()=>{filterRole=c.dataset.r||null;renderContacts();});
   fl.querySelectorAll('[data-p]').forEach(c=>c.onclick=()=>{filterPil=c.dataset.p||null;renderContacts();});
   el('q').oninput=e=>{search=e.target.value;drawContacts();};
-  try{ cacheContacts=await sb('contacts?select=*&order=nom'); }catch(e){ el('clist').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
+  try{ cacheContacts=await sb('contacts?select=*&order=nom&limit=5000'); }catch(e){ el('clist').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
   drawContacts();
 }
 function drawContacts(){
@@ -646,13 +648,60 @@ async function saveFin(id){
 }
 async function delFin(id){if(!confirm('Supprimer ?'))return;try{await sb('finances?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderFinances();}catch(e){alert(e.message);}}
 
+/* TRÉSORERIE */
+const eurl=n=>(n<0?'−':'')+Math.abs(Math.round(n)).toLocaleString('fr-FR')+' €';
+async function renderTreso(){
+  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  let t={},fs=[];
+  try{const r=await sb('treso_snapshot?id=eq.1&select=*');t=(r&&r[0])||{};}catch(e){}
+  try{fs=await sb('finances?select=*&order=date_echeance.asc.nullslast');}catch(e){}
+  const solde=+t.solde_ca||0,aidexa=+t.aidexa||0,limite=+t.limite||-25000;
+  const marge=Math.abs(limite)-Math.abs(solde);
+  const pct=Math.min(100,Math.abs(solde)/Math.abs(limite||-25000)*100);
+  const barcol=pct>90?'var(--crit)':pct>75?'var(--warn)':'var(--good)';
+  const today=new Date();today.setHours(0,0,0,0);const in30=new Date(today);in30.setDate(in30.getDate()+30);
+  const dueAll=fs.filter(f=>f.sens==='sortie'&&f.statut!=='regle');
+  const due30=dueAll.filter(f=>f.date_echeance&&new Date(f.date_echeance)<=in30).reduce((s,f)=>s+(+f.montant||0),0);
+  const totDette=fs.filter(f=>f.type==='dette'&&f.statut!=='regle').reduce((s,f)=>s+(+f.montant||0),0);
+  el('content').innerHTML=`
+    <div class="grid" style="grid-template-columns:1.4fr 1fr 1fr;gap:12px">
+      <div class="card">
+        <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700">Solde compte courant</div>
+        <div style="font-size:30px;font-weight:800;color:${solde<0?'var(--crit)':'var(--good)'};margin-top:6px">${eurl(solde)}</div>
+        <div style="height:10px;border-radius:6px;background:var(--surface2);margin-top:14px;position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:${barcol};width:${pct}%;display:block"></i></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mut2);margin-top:6px"><span>0 €</span><span>marge ${eurl(marge)}</span><span>limite ${eurl(limite)}</span></div>
+      </div>
+      <div class="card"><div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700">Réserve Aidexa</div><div style="font-size:26px;font-weight:800;color:var(--good);margin-top:6px">${eurl(aidexa)}</div><div style="font-size:12px;color:var(--mut);margin-top:6px">Bouée mobilisable</div></div>
+      <div class="card"><div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700">À sortir sous 30 j</div><div style="font-size:26px;font-weight:800;color:var(--warn);margin-top:6px">${eurl(-Math.abs(due30))}</div><div style="font-size:12px;color:var(--mut);margin-top:6px">Dettes : ${eurl(-Math.abs(totDette))}</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin:16px 0 6px;flex-wrap:wrap"><button class="btn sm" id="tresoedit" style="width:auto">Mettre à jour le solde</button><span class="muted" style="font-size:12px">${t.note||''}</span></div>
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:20px 0 10px">🧾 Échéances &amp; dettes à régler</h2>
+    <div class="list">${dueAll.map(f=>{const late=f.date_echeance&&new Date(f.date_echeance)<today;return `<div class="item"><div class="b"><div class="n">${f.libelle}</div><div class="s">${[f.type,f.pilier,(f.date_echeance?new Date(f.date_echeance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}):'sans date')].filter(Boolean).join(' · ')}</div></div><div class="tags"><span class="tg" style="background:${late?'#e6676722':'#8a897f22'};color:${late?'var(--crit)':'var(--mut)'}">${eurl(-Math.abs(f.montant))}</span></div></div>`;}).join('')||'<div class="empty">Rien à régler 🎉</div>'}</div>`;
+  el('tresoedit').onclick=()=>openTresoEdit(t);
+}
+function openTresoEdit(t){
+  t=t||{};
+  openModal(`<h3>Mettre à jour la trésorerie</h3>
+    <div class="field"><label>Solde compte courant (€)</label><input id="ts_solde" type="number" value="${t.solde_ca||''}"></div>
+    <div class="field"><label>Réserve Aidexa (€)</label><input id="ts_aid" type="number" value="${t.aidexa||''}"></div>
+    <div class="field"><label>Limite découvert (€)</label><input id="ts_lim" type="number" value="${t.limite||-25000}"></div>
+    <div class="field"><label>Note</label><input id="ts_note" value="${(t.note||'').replace(/"/g,'&quot;')}"></div>
+    <div class="actions"><button class="btn sec sm" onclick="closeModal()">Annuler</button><button class="btn sm" id="tssave">Enregistrer</button></div><div class="err" id="tserr"></div>`);
+  el('tssave').onclick=saveTreso;
+}
+async function saveTreso(){
+  const body={solde_ca:el('ts_solde').value?+el('ts_solde').value:null,aidexa:el('ts_aid').value?+el('ts_aid').value:null,limite:el('ts_lim').value?+el('ts_lim').value:-25000,note:el('ts_note').value.trim()||null,updated_at:new Date().toISOString()};
+  try{await sb('treso_snapshot?id=eq.1',{method:'PATCH',body:JSON.stringify(body)});closeModal();renderTreso();}
+  catch(e){el('tserr').textContent='Erreur : '+e.message;}
+}
+
 /* COCKPIT */
 async function renderCockpit(){
   el('content').innerHTML='<div class="empty">Chargement…</div>';
   let ts=[],fs=[],nc=0;
   try{ts=await sb('taches?select=*');}catch(e){}
   try{fs=await sb('finances?select=*');}catch(e){}
-  try{nc=(await sb('contacts?select=id')).length;}catch(e){}
+  try{nc=(await sb('contacts?select=id&limit=5000')).length;}catch(e){}
   const today=new Date();today.setHours(0,0,0,0);
   const in30=new Date(today);in30.setDate(in30.getDate()+30);
   const open=ts.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
