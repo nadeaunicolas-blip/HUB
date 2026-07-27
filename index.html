@@ -808,8 +808,25 @@ function nav(v){
 }
 function go(v){nav(v);}
 var fmtE=function(n){return Math.round(n).toLocaleString('fr-FR')+' €';};
-var backBtn='<button class="btn sm" onclick="nav(\'cockpit\')" style="margin-bottom:16px">← Cockpit</button>';
-function famCard(ic,titre,mods){return '<div class="card"><h3 style="margin:0 0 12px;font-size:15px">'+ic+' '+titre+'</h3><div style="display:flex;flex-wrap:wrap;gap:8px">'+mods.map(function(m){return '<button class="chip" style="cursor:pointer" onclick="nav(\''+m[0]+'\')">'+m[1]+'</button>';}).join('')+'</div></div>';}
+function pageHead(ic,titre,sous){
+  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;flex-wrap:wrap">'+
+    '<div style="display:flex;align-items:center;gap:14px"><span style="font-size:30px">'+ic+'</span><div><div style="font-size:23px;font-weight:800;line-height:1.1">'+titre+'</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">'+sous+'</div></div></div>'+
+    '<button class="btn sm sec" onclick="nav(\'cockpit\')">← Cockpit</button>'+
+  '</div>';
+}
+function moduleTile(v,ic,label,col){
+  return '<button onclick="nav(\''+v+'\')" style="display:flex;align-items:center;gap:13px;padding:15px 16px;background:var(--surface2);border:1px solid var(--line);border-radius:14px;cursor:pointer;text-align:left;width:100%;transition:transform .12s,border-color .12s,box-shadow .12s" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.borderColor=\''+col+'\';this.style.boxShadow=\'0 6px 18px rgba(0,0,0,.28)\'" onmouseout="this.style.transform=\'\';this.style.borderColor=\'var(--line)\';this.style.boxShadow=\'none\'">'+
+    '<span style="width:42px;height:42px;flex:0 0 42px;display:flex;align-items:center;justify-content:center;font-size:20px;background:'+col+'22;border-radius:11px">'+ic+'</span>'+
+    '<span style="font-weight:700;font-size:14.5px;color:var(--text)">'+label+'</span>'+
+  '</button>';
+}
+function famPanel(ic,titre,col,tiles){
+  return '<div style="background:var(--surface);border:1px solid var(--line);border-top:3px solid '+col+';border-radius:18px;padding:20px">'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><span style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:17px;background:'+col+'22;border-radius:9px">'+ic+'</span><span style="font-weight:800;font-size:16px">'+titre+'</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px">'+tiles+'</div>'+
+  '</div>';
+}
+
 
 async function renderCockpit(){
   el('content').innerHTML='<div class="empty">Chargement…</div>';
@@ -872,25 +889,31 @@ async function renderCockpit(){
 }
 
 async function renderRsvp(){
-  el('content').innerHTML=backBtn+
-    '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">'+
-      famCard('🤝','CRM & Ventes',[['contacts','Contacts'],['orgs','Organisations'],['pipeline','Pipeline']])+
-      famCard('⚙️','Opérations',[['projets','Projets'],['taches','Tâches']])+
-      famCard('💶','Finances',[['finances','Finances'],['treso','Trésorerie']])+
-      famCard('📣','Marketing',[['contenu','Contenu'],['pilotage','Pilotage']])+
+  const M={contacts:['👤','Contacts'],orgs:['🏢','Organisations'],pipeline:['📈','Pipeline'],projets:['🎯','Projets'],taches:['✅','Tâches'],finances:['💶','Finances'],treso:['💰','Trésorerie'],contenu:['🎬','Contenu'],pilotage:['📊','Pilotage']};
+  const tiles=(keys,col)=>keys.map(function(k){return moduleTile(k,M[k][0],M[k][1],col);}).join('');
+  el('content').innerHTML=pageHead('🍷','RSVP','CRM · Ventes · Opérations · Finances · Marketing')+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px">'+
+      famPanel('🤝','CRM & Ventes','var(--rsvp)',tiles(['contacts','orgs','pipeline'],'var(--rsvp)'))+
+      famPanel('⚙️','Opérations','var(--immobilier)',tiles(['projets','taches'],'var(--immobilier)'))+
+      famPanel('💶','Finances','var(--warn)',tiles(['finances','treso'],'var(--warn)'))+
+      famPanel('📣','Marketing','var(--nws)',tiles(['contenu','pilotage'],'var(--nws)'))+
     '</div>';
 }
 
 async function renderPerso(){
-  el('content').innerHTML=backBtn+
-    '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">'+
-      famCard('🏠','Patrimoine',[['immobilier','Immobilier']])+
+  el('content').innerHTML=pageHead('🏡','Perso','Immobilier & patrimoine')+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px">'+
+      famPanel('🏠','Patrimoine','var(--immobilier)',moduleTile('immobilier','🏠','Immobilier','var(--immobilier)'))+
     '</div>';
 }
 
 async function renderNws(){
-  el('content').innerHTML=backBtn+
-    '<div class="empty" style="padding:50px 20px">🍇 <b>NWS</b> — Import & négoce de vins.<br>À venir : catalogue, marges, commandes.</div>';
+  el('content').innerHTML=pageHead('🍇','NWS','Import & négoce de vins')+
+    '<div style="background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:52px 24px;text-align:center">'+
+      '<div style="font-size:42px;margin-bottom:14px;opacity:.9">🍇</div>'+
+      '<div style="font-size:16px;font-weight:700;color:var(--mut)">Univers en préparation</div>'+
+      '<div style="font-size:12.5px;margin-top:6px;color:var(--mut2)">À venir : catalogue, marges, commandes, clients pros.</div>'+
+    '</div>';
 }
 
 </script>
