@@ -578,29 +578,46 @@ const T_STAT=[['a_faire','À faire'],['en_cours','En cours'],['fait','Fait'],['a
 const PRIOS=[['p1','P1'],['p2','P2'],['p3','P3'],['p4','P4']];
 const PRIO_COLOR={p1:'var(--crit)',p2:'var(--warn)',p3:'var(--rsvp)',p4:'var(--mut2)'};
 let tFilter='ouvertes';
+const KCOLS=[['a_faire','À faire'],['en_cours','En cours'],['fait','Fait']];
+let tPil=null;
 async function renderTaches(){
-  el('content').innerHTML=`<div class="toolbar" id="tf"></div><div id="tlist" class="list"><div class="empty">Chargement…</div></div>`;
-  el('tf').innerHTML=[['ouvertes','Ouvertes'],['toutes','Toutes'],['p1','P1'],['fait','Faites']].map(([k,l])=>`<span class="chip ${tFilter===k?'on':''}" data-t="${k}">${l}</span>`).join('');
-  el('tf').querySelectorAll('[data-t]').forEach(c=>c.onclick=()=>{tFilter=c.dataset.t;renderTaches();});
-  let ts;try{ts=await sb('taches?select=*&order=echeance.asc.nullslast');}catch(e){el('tlist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
-  let rows=ts.slice();
-  if(tFilter==='ouvertes')rows=rows.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
-  else if(tFilter==='p1')rows=rows.filter(t=>t.priorite==='p1'&&t.statut!=='fait');
-  else if(tFilter==='fait')rows=rows.filter(t=>t.statut==='fait');
-  if(!rows.length){el('tlist').innerHTML='<div class="empty">Aucune tâche.</div>';return;}
+  el('content').innerHTML=`
+    <div class="toolbar" id="tf"></div>
+    <div class="toolbar"><input id="tnew" placeholder="Nouvelle tâche…" style="flex:1;min-width:180px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:14px"><button class="btn sm" id="tadd" style="width:auto">+ Ajouter</button></div>
+    <div id="kb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start"><div class="empty">Chargement…</div></div>`;
+  el('tf').innerHTML='<span class="chip '+(!tPil?'on':'')+'" data-p="">Tous piliers</span>'+PILIERS.map(([k,l])=>`<span class="chip ${tPil===k?'on':''}" data-p="${k}">${l}</span>`).join('');
+  el('tf').querySelectorAll('[data-p]').forEach(c=>c.onclick=()=>{tPil=c.dataset.p||null;renderTaches();});
+  el('tadd').onclick=addQuickTache;
+  el('tnew').addEventListener('keydown',e=>{if(e.key==='Enter')addQuickTache();});
+  let ts;try{ts=await sb('taches?select=*&order=priorite.asc,echeance.asc.nullslast&limit=1000');}catch(e){el('kb').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
+  if(tPil)ts=ts.filter(t=>t.pilier===tPil);
   const today=new Date();today.setHours(0,0,0,0);
-  el('tlist').innerHTML=rows.map(t=>{
-    const done=t.statut==='fait';
-    let due='';if(t.echeance){const d=new Date(t.echeance);const late=d<today&&!done;due=`<span class="tg" style="background:${late?'#e6676722':'#8a897f22'};color:${late?'var(--crit)':'var(--mut)'}">${d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}${late?' · retard':''}</span>`;}
-    return `<div class="item">
-      <div class="av" style="cursor:pointer;background:${done?'#31c48d22':'var(--surface2)'};color:${done?'var(--good)':'var(--mut2)'}" onclick='toggleTache("${t.id}","${done?'a_faire':'fait'}")'>${done?'✓':'○'}</div>
-      <div class="b" onclick='openTache(${JSON.stringify(t).replace(/'/g,"&#39;")})' style="cursor:pointer">
-        <div class="n" style="${done?'text-decoration:line-through;color:var(--mut2)':''}">${t.titre}</div>
-        <div class="s">${t.pilier||''}</div></div>
-      <div class="tags">${due}<span class="tg" style="background:${PRIO_COLOR[t.priorite]}22;color:${PRIO_COLOR[t.priorite]}">${(t.priorite||'p4').toUpperCase()}</span></div>
+  el('kb').innerHTML=KCOLS.map(([st,lab])=>{
+    const items=ts.filter(t=>t.statut===st);
+    return `<div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;min-height:80px">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;padding:4px 6px 10px;display:flex;justify-content:space-between"><span>${lab}</span><span>${items.length}</span></div>
+      ${items.map(t=>{
+        const late=t.echeance&&new Date(t.echeance)<today&&st!=='fait';
+        return `<div class="item" style="margin-bottom:8px;display:block;cursor:pointer" onclick='openTache(${JSON.stringify(t).replace(/'/g,"&#39;")})'>
+          <div class="n" style="font-size:13.5px;${st==='fait'?'text-decoration:line-through;color:var(--mut2)':''}">${t.titre}</div>
+          <div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">
+            ${t.pilier?`<span class="tg" style="background:${PIL_COLOR[t.pilier]}22;color:${PIL_COLOR[t.pilier]}">${t.pilier}</span>`:''}
+            <span class="tg" style="background:${PRIO_COLOR[t.priorite]}22;color:${PRIO_COLOR[t.priorite]}">${(t.priorite||'p4').toUpperCase()}</span>
+            ${t.echeance?`<span class="tg" style="background:${late?'#e6676722':'#8a897f22'};color:${late?'var(--crit)':'var(--mut)'}">${new Date(t.echeance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}${late?' ·retard':''}</span>`:''}
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            ${st!=='a_faire'?`<button class="chip" style="padding:4px 10px" onclick='event.stopPropagation();moveTache("${t.id}","${prevStatut(st)}")'>←</button>`:''}
+            ${st!=='fait'?`<button class="chip" style="padding:4px 10px" onclick='event.stopPropagation();moveTache("${t.id}","${nextStatut(st)}")'>${st==='en_cours'?'✓ Fait':'→'}</button>`:''}
+          </div>
+        </div>`;
+      }).join('')||'<div class="muted" style="font-size:12px;padding:6px">—</div>'}
     </div>`;
   }).join('');
 }
+function nextStatut(s){return s==='a_faire'?'en_cours':'fait';}
+function prevStatut(s){return s==='fait'?'en_cours':'a_faire';}
+async function moveTache(id,st){try{await sb('taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:st})});renderTaches();}catch(e){alert(e.message);}}
+async function addQuickTache(){const v=el('tnew').value.trim();if(!v)return;try{await sb('taches',{method:'POST',prefer:'return=minimal',body:JSON.stringify({titre:v,statut:'a_faire',priorite:'p3',pilier:tPil||null})});el('tnew').value='';renderTaches();}catch(e){alert('Erreur : '+e.message);}}
 async function toggleTache(id,st){try{await sb('taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:st})});renderTaches();}catch(e){alert(e.message);}}
 function openTache(t){
   t=t||{};const isEdit=!!t.id;
