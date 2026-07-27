@@ -774,6 +774,7 @@ async function renderCockpit(){
   try{ts=await sb('taches?select=*');}catch(e){}
   try{fs=await sb('finances?select=*');}catch(e){}
   try{nc=(await sb('contacts?select=id&limit=5000')).length;}catch(e){}
+  let ag=[];try{ag=(await sb('agenda_cache?select=*&order=debut.asc')).filter(e=>new Date(e.debut)>=new Date(Date.now()-43200000));}catch(e){}
   const today=new Date();today.setHours(0,0,0,0);
   const in30=new Date(today);in30.setDate(in30.getDate()+30);
   const open=ts.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
@@ -790,6 +791,8 @@ async function renderCockpit(){
       ${kpi('P1 ouvertes',p1.length,'var(--warn)')}
       ${kpi('Contacts',nc,'')}
     </div>
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">📅 Agenda — prochains jours</h2>
+    <div class="list">${ag.slice(0,8).map(e=>`<div class="item"><div class="av">📅</div><div class="b"><div class="n">${e.titre}</div><div class="s">${new Date(e.debut).toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'short'})} · ${new Date(e.debut).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}${e.lieu?' · '+e.lieu:''}</div></div></div>`).join('')||'<div class="empty">Rien à l’agenda</div>'}</div>
     <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">🔥 P1 en cours</h2>
     <div class="list">${p1.slice(0,6).map(t=>`<div class="item"><div class="av" style="background:#e6676722;color:var(--crit)">!</div><div class="b"><div class="n">${t.titre}</div><div class="s">${t.pilier||''}</div></div></div>`).join('')||'<div class="empty">Rien en P1 🎉</div>'}</div>
     <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">🧾 Prochaines sorties (30 j)</h2>
