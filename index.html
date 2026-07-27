@@ -149,7 +149,9 @@ const STAGES = [['nouveau','Nouveau'],['qualifie','Qualifié'],['proposition','P
 
 let token=null, email=null, view='contacts';
 let cacheOrgs=[], cacheContacts=[];
-let filterRole=null, filterPil=null, search='';
+let filterRole=null, filterPil=null, filterSrc=null, search='';
+const SRC_LABEL={'brevo:bni':'BNI','brevo:cci':'CCI','brevo:corporate':'Corporate','brevo:horeca':'Horeca','brevo:leads-meta':'Leads Meta','brevo:vino-optin':'Vinothèque','brevo:vino-whatsapp':'Vino WhatsApp','brevo:clients-btob':'Clients B2B','brevo:conversations':'Conversations','brevo:autre':'Brevo'};
+const srcLabel=s=>SRC_LABEL[s]||(s?s.replace('brevo:',''):'');
 
 /* ───── API ───── */
 async function sb(path, opts={}, _retry){
@@ -281,38 +283,47 @@ function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
 
 /* CONTACTS */
 async function renderContacts(){
+  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  try{ cacheContacts=await sb('contacts?select=*&order=nom&limit=5000'); }catch(e){ el('content').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
+  const cats=[...new Set(cacheContacts.map(c=>c.source).filter(Boolean))].sort();
   el('content').innerHTML=`
-    <div class="toolbar">
-      <input type="search" id="q" placeholder="Rechercher un contact…" value="${search}">
-    </div>
-    <div class="toolbar" id="filters"></div>
-    <div id="clist" class="list"><div class="empty">Chargement…</div></div>`;
-  const fl=el('filters');
-  fl.innerHTML='<span class="chip '+(!filterRole?'on':'')+'" data-r="">Tous rôles</span>'+
+    <div class="toolbar"><input type="search" id="q" placeholder="Rechercher un contact…" value="${search}"></div>
+    <div class="toolbar" id="frole"></div>
+    ${cats.length?'<div class="toolbar" id="fcat"></div>':''}
+    <div id="clist" class="list"></div>`;
+  el('frole').innerHTML='<span class="chip '+(!filterRole?'on':'')+'" data-r="">Tous rôles</span>'+
     ROLES.map(r=>`<span class="chip ${filterRole===r?'on':''}" data-r="${r}">${ROLE_LABEL[r]}</span>`).join('')+
-    '&nbsp;&nbsp;'+'<span class="chip '+(!filterPil?'on':'')+'" data-p="">Tous piliers</span>'+
+    '<span style="width:10px;display:inline-block"></span>'+'<span class="chip '+(!filterPil?'on':'')+'" data-p="">Tous piliers</span>'+
     PILIERS.map(([k,l])=>`<span class="chip ${filterPil===k?'on':''}" data-p="${k}">${l}</span>`).join('');
-  fl.querySelectorAll('[data-r]').forEach(c=>c.onclick=()=>{filterRole=c.dataset.r||null;renderContacts();});
-  fl.querySelectorAll('[data-p]').forEach(c=>c.onclick=()=>{filterPil=c.dataset.p||null;renderContacts();});
+  el('frole').querySelectorAll('[data-r]').forEach(c=>c.onclick=()=>{filterRole=c.dataset.r||null;renderContacts();});
+  el('frole').querySelectorAll('[data-p]').forEach(c=>c.onclick=()=>{filterPil=c.dataset.p||null;renderContacts();});
+  if(cats.length){
+    el('fcat').innerHTML='<span class="chip '+(!filterSrc?'on':'')+'" data-c="">Toutes catégories</span>'+
+      cats.map(s=>`<span class="chip ${filterSrc===s?'on':''}" data-c="${s}">${srcLabel(s)}</span>`).join('');
+    el('fcat').querySelectorAll('[data-c]').forEach(c=>c.onclick=()=>{filterSrc=c.dataset.c||null;renderContacts();});
+  }
   el('q').oninput=e=>{search=e.target.value;drawContacts();};
-  try{ cacheContacts=await sb('contacts?select=*&order=nom&limit=5000'); }catch(e){ el('clist').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
   drawContacts();
 }
 function drawContacts(){
   let rows=cacheContacts.slice();
   if(filterRole)rows=rows.filter(c=>(c.roles||[]).includes(filterRole));
   if(filterPil)rows=rows.filter(c=>(c.piliers||[]).includes(filterPil));
-  if(search){const s=search.toLowerCase();rows=rows.filter(c=>((c.prenom||'')+' '+(c.nom||'')+' '+(c.email||'')).toLowerCase().includes(s));}
+  if(filterSrc)rows=rows.filter(c=>c.source===filterSrc);
+  if(search){const s=search.toLowerCase();rows=rows.filter(c=>((c.prenom||'')+' '+(c.nom||'')+' '+(c.email||'')+' '+(c.telephone||'')).toLowerCase().includes(s));}
   const orgName=id=>{const o=cacheOrgs.find(o=>o.id===id);return o?o.nom:'';};
-  if(!rows.length){el('clist').innerHTML='<div class="empty">Aucun contact.<br>Clique « + Nouveau » pour en ajouter un.</div>';return;}
-  el('clist').innerHTML=rows.map(c=>`
+  if(!rows.length){el('clist').innerHTML='<div class="empty">Aucun contact.</div>';return;}
+  const shown=rows.slice(0,300);
+  const head=`<div class="muted" style="font-size:12px;margin-bottom:8px">${rows.length} contact${rows.length>1?'s':''}${rows.length>300?" · 300 affichés (affine avec la recherche/filtres)":''}</div>`;
+  el('clist').innerHTML=head+shown.map(c=>`
     <div class="item" onclick='openContact(${JSON.stringify(c).replace(/'/g,"&#39;")})'>
       <div class="av">${initials(c)}</div>
       <div class="b">
         <div class="n">${(c.prenom||'')+' '+c.nom}</div>
-        <div class="s">${[orgName(c.organisation_id),c.poste,c.email].filter(Boolean).join(' · ')||'—'}</div>
+        <div class="s">${[orgName(c.organisation_id),c.poste,c.email,c.telephone].filter(Boolean).join(' · ')||'—'}</div>
       </div>
       <div class="tags">
+        ${c.source&&srcLabel(c.source)?`<span class="tg" style="background:#3987e522;color:var(--rsvp)">${srcLabel(c.source)}</span>`:''}
         ${(c.piliers||[]).map(p=>`<span class="tg" style="background:${PIL_COLOR[p]}22;color:${PIL_COLOR[p]}">${p}</span>`).join('')}
         ${(c.roles||[]).map(r=>`<span class="tg" style="background:#8a897f22;color:var(--mut)">${ROLE_LABEL[r]}</span>`).join('')}
       </div>
@@ -651,7 +662,8 @@ async function delFin(id){if(!confirm('Supprimer ?'))return;try{await sb('financ
 /* TRÉSORERIE */
 const eurl=n=>(n<0?'−':'')+Math.abs(Math.round(n)).toLocaleString('fr-FR')+' €';
 async function renderTreso(){
-  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  el('content').innerHTML=`<iframe src="./treso.html" title="Trésorerie" style="width:100%;height:calc(100vh - 120px);border:1px solid var(--line);border-radius:14px;background:#0f1420"></iframe>`;
+  return;
   let t={},fs=[];
   try{const r=await sb('treso_snapshot?id=eq.1&select=*');t=(r&&r[0])||{};}catch(e){}
   try{fs=await sb('finances?select=*&order=date_echeance.asc.nullslast');}catch(e){}
