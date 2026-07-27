@@ -67,6 +67,14 @@ footer{margin-top:30px;text-align:center;font-size:11px;color:var(--grey)}
 </style>
 </head>
 <body>
+<script>
+/* SYNC HUB (état local rsvp_ -> Supabase) */
+(function(){var U="https://rdursbdlxaxrwafyyqwv.supabase.co",ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkdXJzYmRseGF4cndhZnl5cXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDc4NzQsImV4cCI6MjEwMDcyMzg3NH0.4wxwNnPbWsp_KVgH7GanEpKxKpg7imxyuvkDoB2UJiY",KEY="pilotage",PFX="rsvp_";
+function tok(){try{var s=JSON.parse(localStorage.getItem('hub_session')||'{}');return s.access_token||ANON;}catch(e){return ANON;}}
+try{var x=new XMLHttpRequest();x.open('GET',U+'/rest/v1/kv_store?key=eq.'+KEY+'&select=value',false);x.setRequestHeader('apikey',ANON);x.setRequestHeader('Authorization','Bearer '+tok());x.send();if(x.status>=200&&x.status<300){var a=JSON.parse(x.responseText||'[]');if(a[0]&&a[0].value){var o=a[0].value;Object.keys(o).forEach(function(k){if(k.indexOf(PFX)===0){try{localStorage.setItem(k,o[k]);}catch(e){}}});}}}catch(e){}
+var _s=localStorage.setItem.bind(localStorage),t=null;function push(){var o={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf(PFX)===0)o[k]=localStorage.getItem(k);}try{fetch(U+'/rest/v1/kv_store?key=eq.'+KEY,{method:'PATCH',headers:{'apikey':ANON,'Authorization':'Bearer '+tok(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({value:o,updated_at:new Date().toISOString()})});}catch(e){}}
+localStorage.setItem=function(k,v){_s(k,v);if(typeof k==='string'&&k.indexOf(PFX)===0){clearTimeout(t);t=setTimeout(push,600);}};})();
+</script>
 <div class="wrap">
 
 <header>

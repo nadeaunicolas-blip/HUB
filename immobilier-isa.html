@@ -118,6 +118,20 @@ input[type=date]:focus{outline:2px solid var(--sage);background:#fff}
 </style>
 </head>
 <body>
+<script>
+/* SYNC HUB (état des champs -> Supabase) */
+(function(){var U="https://rdursbdlxaxrwafyyqwv.supabase.co",ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkdXJzYmRseGF4cndhZnl5cXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDc4NzQsImV4cCI6MjEwMDcyMzg3NH0.4wxwNnPbWsp_KVgH7GanEpKxKpg7imxyuvkDoB2UJiY",KEY="isa";
+function tok(){try{var s=JSON.parse(localStorage.getItem('hub_session')||'{}');return s.access_token||ANON;}catch(e){return ANON;}}
+var saved={},restoring=true;
+try{var x=new XMLHttpRequest();x.open('GET',U+'/rest/v1/kv_store?key=eq.'+KEY+'&select=value',false);x.setRequestHeader('apikey',ANON);x.setRequestHeader('Authorization','Bearer '+tok());x.send();if(x.status>=200&&x.status<300){var a=JSON.parse(x.responseText||'[]');if(a[0]&&a[0].value)saved=a[0].value;}}catch(e){}
+function flds(){return document.querySelectorAll('input[id],select[id],textarea[id]');}
+function skip(el){return el.disabled||el.readOnly||el.type==='button'||el.type==='submit';}
+function restore(){flds().forEach(function(el){if(skip(el))return;var v=saved[el.id];if(v===undefined)return;if(el.type==='checkbox'){el.checked=(v===true||v==='true');}else{el.value=v;}el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});restoring=false;}
+var t=null;function push(){var o={};flds().forEach(function(el){if(skip(el))return;o[el.id]=(el.type==='checkbox')?el.checked:el.value;});try{fetch(U+'/rest/v1/kv_store?key=eq.'+KEY,{method:'PATCH',headers:{'apikey':ANON,'Authorization':'Bearer '+tok(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({value:o,updated_at:new Date().toISOString()})});}catch(e){}}
+function onchg(e){if(restoring)return;if(e.target&&e.target.id&&!skip(e.target)){clearTimeout(t);t=setTimeout(push,700);}}
+document.addEventListener('input',onchg,true);document.addEventListener('change',onchg,true);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(restore,80);});else setTimeout(restore,80);})();
+</script>
 <div class="wrap">
 <header>
   <h1>Immobiliare ISA — Simulatore affitti</h1>
