@@ -1,3 +1,554 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rénovation Edolo</title>
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111110;color:#c3c2b7;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:24px}.b{max-width:440px}h2{color:#fff;margin:0 0 10px}p{line-height:1.5}b{color:#fff}</style></head>
-<body><div class="b"><h2>Rénovation Edolo</h2><p>Ce module accueillera ton artifact <b>Rénovation Edolo</b>.<br><br>Ouvre-le une fois dans ton panneau <b>Artifacts</b> de Claude (un simple clic) pour le télécharger depuis iCloud, puis dis-moi « ok » — je l'intègre ici automatiquement.</p></div></body></html>
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Edolo Via Togni Tracker",
+  "schemaVersion": 1,
+  "description": "Tracker Ristrutturazione Edolo Via Togni 9 — Fase 1 : versé Isa, payé, reste dispo, documents manquants."
+}
+</script>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edolo Via Togni — Tracker Ristrutturazione</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f8f7f4;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    color: #1a1a1a;
+  }
+  .subtitle {
+    color: #6b6b6b;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .card {
+    background: white;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid #e5e5e0;
+  }
+  .card-label {
+    font-size: 12px;
+    color: #6b6b6b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .card-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .card-value.positive { color: #2d7d3a; }
+  .card-value.negative { color: #c73939; }
+  .card-value.warning { color: #b57c00; }
+  .card-sub {
+    font-size: 12px;
+    color: #6b6b6b;
+    margin-top: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e5e5e0;
+    font-size: 13px;
+  }
+  th {
+    background: #f0efeb;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #1a1a1a;
+    border-bottom: 1px solid #e5e5e0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0efeb;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: #faf9f5; }
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge-paid { background: #d4edda; color: #155724; }
+  .badge-pending { background: #fff3cd; color: #856404; }
+  .badge-missing { background: #f8d7da; color: #721c24; }
+  .badge-info { background: #d1ecf1; color: #0c5460; }
+  .amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+  .amount-total {
+    font-weight: 600;
+    background: #f0efeb;
+  }
+  .trn {
+    font-family: "SF Mono", Monaco, monospace;
+    font-size: 11px;
+    color: #6b6b6b;
+  }
+  .section-block {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #e5e5e0;
+    margin-bottom: 16px;
+  }
+  .action-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .action-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0efeb;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .action-list li:last-child { border-bottom: none; }
+  .action-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+  }
+  .action-text { flex: 1; }
+  .action-text strong { color: #1a1a1a; }
+  .action-text a {
+    color: #0066cc;
+    text-decoration: none;
+  }
+  .action-text a:hover { text-decoration: underline; }
+  .missing-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .missing-list li {
+    background: #fff8f0;
+    border-left: 3px solid #b57c00;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .missing-list li strong { color: #7a5300; }
+  @media (max-width: 700px) {
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    .missing-list { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Edolo Via Togni 9 — Tracker Ristrutturazione</h1>
+  <div class="subtitle">Fase 1 chantier • Détraction Bonus Ristrutturazioni 50% art. 16-bis DPR 917/1986</div>
+
+  <div class="cards-grid">
+    <div class="card">
+      <div class="card-label">Reçu Isa</div>
+      <div class="card-value positive">61 000 €</div>
+      <div class="card-sub">3 virements BPER</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Payé (bonifici parlanti)</div>
+      <div class="card-value">59 301 €</div>
+      <div class="card-sub">8 bonifici / 5 fournisseurs</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Reste à payer Fase 1</div>
+      <div class="card-value warning">~7 500 €</div>
+      <div class="card-sub">Chiodi + Effe</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Manque pour boucler</div>
+      <div class="card-value negative">−5 800 €</div>
+      <div class="card-sub">À demander à Isa</div>
+    </div>
+  </div>
+
+  <h2>💵 Enveloppe Isabella — versements & solde</h2>
+
+  <div class="cards-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 12px;">
+    <div class="card">
+      <div class="card-label">Total versé par Isa</div>
+      <div class="card-value positive">61 000 €</div>
+      <div class="card-sub">3 virements BPER</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Consommé (bonifici parlanti)</div>
+      <div class="card-value">−59 301 €</div>
+      <div class="card-sub">97,2% de l'enveloppe utilisée</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Reste dispo pour travaux</div>
+      <div class="card-value warning">1 699 €</div>
+      <div class="card-sub">61 000 − 59 301</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Origine</th>
+        <th>Libellé / note</th>
+        <th class="amount">Entrée</th>
+        <th class="amount">Sortie</th>
+        <th class="amount">Solde</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>05/05/2026</td>
+        <td>BPER Isa</td>
+        <td>"Lavori di ristrutturazione" — versement d'ouverture</td>
+        <td class="amount" style="color:#2d7d3a">+50 000,00</td>
+        <td class="amount">—</td>
+        <td class="amount">50 000,00</td>
+      </tr>
+      <tr>
+        <td>06/05/2026</td>
+        <td>→ Mariolini</td>
+        <td>Bonifico parlante FPR 11/26</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−1 395,68</td>
+        <td class="amount">48 604,32</td>
+      </tr>
+      <tr>
+        <td>18/05/2026</td>
+        <td>→ Sintesi</td>
+        <td>Bonifico parlante 1a rata tetto</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−24 000,00</td>
+        <td class="amount">24 604,32</td>
+      </tr>
+      <tr>
+        <td>01/06/2026</td>
+        <td>→ Cometal</td>
+        <td>Bonifico parlante lattoneria</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−10 450,00</td>
+        <td class="amount">14 154,32</td>
+      </tr>
+      <tr>
+        <td>30/06/2026</td>
+        <td>→ Sintesi</td>
+        <td>Bonifico parlante 2a rata saldo tetto</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−10 813,90</td>
+        <td class="amount" style="color:#c73939"><strong>3 340,42</strong></td>
+      </tr>
+      <tr>
+        <td>03/07/2026</td>
+        <td>BPER Isa</td>
+        <td>Réapprovisionnement enveloppe (tranche 2)</td>
+        <td class="amount" style="color:#2d7d3a">+7 000,00</td>
+        <td class="amount">—</td>
+        <td class="amount">10 340,42</td>
+      </tr>
+      <tr>
+        <td>03/07/2026</td>
+        <td>BPER Isa</td>
+        <td>Réapprovisionnement enveloppe (tranche 3)</td>
+        <td class="amount" style="color:#2d7d3a">+4 000,00</td>
+        <td class="amount">—</td>
+        <td class="amount">14 340,42</td>
+      </tr>
+      <tr>
+        <td>16/07/2026</td>
+        <td>→ Sandrini</td>
+        <td>Bonifico parlante FNO 1253 — ponteggi + gru</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−8 608,32</td>
+        <td class="amount">5 732,10</td>
+      </tr>
+      <tr>
+        <td>16/07/2026</td>
+        <td>→ Sandrini</td>
+        <td>Bonifico parlante 2476 — smontaggio</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−1 244,40</td>
+        <td class="amount">4 487,70</td>
+      </tr>
+      <tr>
+        <td>23/07/2026</td>
+        <td>→ Sabbadini</td>
+        <td>Bonifico parlante Fatt. 145 — Materiali</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−881,12</td>
+        <td class="amount">3 606,58</td>
+      </tr>
+      <tr>
+        <td>23/07/2026</td>
+        <td>→ Sabbadini</td>
+        <td>Bonifico parlante Fatt. 199 — Materiali</td>
+        <td class="amount">—</td>
+        <td class="amount" style="color:#c73939">−1 907,71</td>
+        <td class="amount"><strong>1 698,87</strong></td>
+      </tr>
+      <tr class="amount-total">
+        <td colspan="2"><strong>Totaux</strong></td>
+        <td></td>
+        <td class="amount" style="color:#2d7d3a"><strong>+61 000,00</strong></td>
+        <td class="amount" style="color:#c73939"><strong>−59 301,13</strong></td>
+        <td class="amount"><strong>1 698,87</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-block" style="margin-top: 12px; background:#fdecec; border-left: 4px solid #c73939;">
+    <strong>🔴 Projection Fase 1 : il manque du cash.</strong><br>
+    Reçu Isa <strong>61 000 €</strong> − Payé <strong>59 301 €</strong> − Reste à payer <strong>~7 500 €</strong> (Chiodi + Effe) = <strong>−5 801 € de déficit</strong>.<br>
+    <strong>👉 Demander à Isa un complément de ~6 000 € pour boucler Chiodi + Effe.</strong>
+  </div>
+
+  <h2>✅ Bonifici parlanti exécutés</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Fournisseur</th>
+        <th>Facture</th>
+        <th class="amount">Montant</th>
+        <th>TRN</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>06/05/2026</td>
+        <td><strong>Mariolini</strong> (Ing.)</td>
+        <td>FPR 11/26 — Pratica sismica</td>
+        <td class="amount">1 395,68 €</td>
+        <td class="trn">2605063207978794ZX0320000000IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr>
+        <td>18/05/2026</td>
+        <td><strong>Sintesi srl</strong></td>
+        <td>35-FE 1a rata — Tetto + Velux</td>
+        <td class="amount">24 000,00 €</td>
+        <td class="trn">2605183218957139ZX0320011200IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr>
+        <td>01/06/2026</td>
+        <td><strong>Cometal</strong></td>
+        <td>Fatt. 19 — Lattoneria</td>
+        <td class="amount">10 450,00 €</td>
+        <td class="trn">2606013234133012ZX0320011200IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr>
+        <td>30/06/2026</td>
+        <td><strong>Sintesi srl</strong></td>
+        <td>35-FE 2a rata — Saldo tetto</td>
+        <td class="amount">10 813,90 €</td>
+        <td class="trn">2606293264561901ZX0320011200IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr>
+        <td>16/07/2026</td>
+        <td><strong>Sandrini srl</strong></td>
+        <td>FNO 1253 — Ponteggi + gru mois 1</td>
+        <td class="amount">8 608,32 €</td>
+        <td class="trn">2607163282823559ZX0320000000IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr>
+        <td>16/07/2026</td>
+        <td><strong>Sandrini srl</strong></td>
+        <td>2476 — Smontaggio ponteggi + gru</td>
+        <td class="amount">1 244,40 €</td>
+        <td class="trn">2607163282826114ZX0320000000IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr>
+        <td>23/07/2026</td>
+        <td><strong>Sabbadini srl</strong></td>
+        <td>Fatt. 145 — Materiali edilizia</td>
+        <td class="amount">881,12 €</td>
+        <td class="trn">2607233290405403ZX0320000000IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr>
+        <td>23/07/2026</td>
+        <td><strong>Sabbadini srl</strong></td>
+        <td>Fatt. 199 — Materiali edilizia</td>
+        <td class="amount">1 907,71 €</td>
+        <td class="trn">2607233290408243ZX0320000000IT</td>
+        <td><span class="badge badge-paid">Payé</span></td>
+      </tr>
+      <tr class="amount-total">
+        <td colspan="3"><strong>TOTAL DÉCAISSÉ</strong></td>
+        <td class="amount"><strong>59 301,13 €</strong></td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>⏳ Reste à payer — Fase 1</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Fournisseur</th>
+        <th>Facture</th>
+        <th class="amount">Montant</th>
+        <th>Échéance</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Chiodi</strong> (geometra)</td>
+        <td>Saldo pratica edilizia</td>
+        <td class="amount">~1 500 €</td>
+        <td>Fattura à demander</td>
+        <td><span class="badge badge-info">En attente fattura</span></td>
+      </tr>
+      <tr>
+        <td><strong>Effe Sistemi</strong></td>
+        <td>Prestation technique</td>
+        <td class="amount">~6 000 €</td>
+        <td>Fattura émise, pas reçue</td>
+        <td><span class="badge badge-info">À réceptionner</span></td>
+      </tr>
+      <tr class="amount-total">
+        <td colspan="2"><strong>TOTAL RESTE À PAYER</strong></td>
+        <td class="amount"><strong>~7 500,00 €</strong></td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>❌ Documents manquants dans iCloud <code>07_EDOLO_Fatture_Contabili/</code></h2>
+  <ul class="missing-list">
+    <li><strong>Fattura Mariolini FPR 11/26</strong><br>→ <a href="https://ivaservizi.agenziaentrate.gov.it/portale/" target="_blank">Cassetto fiscale AdE → Fatture ricevute</a></li>
+    <li><strong>Fattura Chiodi saldo (~1 500 €)</strong><br>→ <a href="mailto:chiodi.studiotecnico@gmail.com?subject=Richiesta%20fattura%20saldo%20pratica%20edilizia%20Edolo%20Via%20Togni%209&amp;body=Buongiorno%20Federico,%0A%0Ati%20chiedo%20di%20emettere%20la%20fattura%20saldo%20per%20la%20pratica%20edilizia%20Edolo%20Via%20Togni%209.%0A%0AGrazie,%0ANicolas" target="_blank">Relancer Chiodi par email</a></li>
+    <li><strong>Fattura Effe Sistemi (~6 000 €)</strong><br>→ <a href="mailto:tecnico@effe-d.it?subject=Richiesta%20fattura%20cantiere%20Edolo%20Via%20Togni%209&amp;body=Buongiorno,%0A%0Ati%20chiedo%20cortesemente%20di%20inviarmi%20la%20fattura%20per%20le%20prestazioni%20eseguite%20presso%20il%20cantiere%20di%20Edolo%20Via%20Togni%209.%0A%0AGrazie,%0ANicolas%20Nadeau" target="_blank">Relancer Effe par email</a></li>
+  </ul>
+  <div class="section-block" style="margin-top: 8px; background:#e8f5ec; border-left: 3px solid #2d7d3a; font-size: 12px;">
+    <strong>✅ Sabbadini (145 + 199) réglé le 23/07</strong> — contabili rangés dans <code>05_Sabbadini_Contabile/</code>.<br>
+    <strong>✅ Fattura Cometal 19 récupérée le 23/07</strong> — rangée dans <code>03_Cometal_Contabile/</code>.<br>
+    <strong>✅ Contabili Sintesi 1a + 2a rata récupérés le 23/07</strong> — rangés dans <code>02_Sintesi_Contabile/</code>.
+  </div>
+
+  <h2>🎯 Actions immédiates</h2>
+  <div class="section-block">
+    <ul class="action-list">
+      <li>
+        <span class="action-icon">💳</span>
+        <div class="action-text">
+          <strong>Payer les 2 bonifici Sabbadini</strong> (881,12 € + 1 907,71 € = 2 788,83 €)<br>
+          IBAN IT78T0306954471100000004351 · P.IVA 02945490981 · Bonifici parlanti (art. 16-bis)
+        </div>
+      </li>
+      <li>
+        <span class="action-icon">📥</span>
+        <div class="action-text">
+          <strong>Télécharger 2 contabili Sintesi</strong> depuis <a href="https://finecobank.com" target="_blank">Fineco → Archivi Bonifici</a><br>
+          TRN 1a rata : 2605183218957139 · TRN 2a rata : 2606293264561901
+        </div>
+      </li>
+      <li>
+        <span class="action-icon">📧</span>
+        <div class="action-text">
+          <strong>Récupérer fattura Cometal 19</strong> depuis <a href="https://mail.google.com/mail/u/0/#inbox/19e81d03ace07003" target="_blank">l'email Isabella du 01/06</a>
+        </div>
+      </li>
+      <li>
+        <span class="action-icon">🏛️</span>
+        <div class="action-text">
+          <strong>Récupérer fattura Mariolini</strong> sur <a href="https://ivaservizi.agenziaentrate.gov.it/portale/" target="_blank">cassetto fiscale Agenzia Entrate</a> → Fatture ricevute
+        </div>
+      </li>
+      <li>
+        <span class="action-icon">📨</span>
+        <div class="action-text">
+          <strong>Relancer Chiodi</strong> pour émission fattura saldo (~1 500 €) + <strong>relancer Effe Sistemi</strong> pour envoi fattura (~6 000 €)
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <h2>📊 Vue globale — quand Fase 1 sera bouclée</h2>
+  <div class="section-block">
+    <table>
+      <tbody>
+        <tr>
+          <td>Total dépensé bonifici parlanti (payé + à payer)</td>
+          <td class="amount">~56 948 €</td>
+        </tr>
+        <tr>
+          <td>Détraction 50% totale sur 10 ans</td>
+          <td class="amount">~28 474 €</td>
+        </tr>
+        <tr>
+          <td>IRPEF économisée / an</td>
+          <td class="amount">~2 847 €</td>
+        </tr>
+        <tr>
+          <td>Cash Chiodi hors détraction</td>
+          <td class="amount">3 500 €</td>
+        </tr>
+        <tr class="amount-total">
+          <td><strong>COÛT TOTAL FASE 1 (net après détraction)</strong></td>
+          <td class="amount"><strong>~31 974 €</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="text-align: center; color: #6b6b6b; font-size: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e5e0;">
+    Dernière mise à jour manuelle : 22/07/2026
+  </div>
+
+</div>
+</body>
+</html>
