@@ -113,6 +113,9 @@
       <a class="nav" data-view="taches"><span class="ic">✅</span> Tâches</a>
       <a class="nav" data-view="finances"><span class="ic">💶</span> Finances</a>
       <a class="nav" data-view="treso"><span class="ic">💰</span> Trésorerie</a>
+      <a class="nav" data-view="immobilier"><span class="ic">🏠</span> Immobilier</a>
+      <a class="nav" data-view="contenu"><span class="ic">🎬</span> Contenu</a>
+      <a class="nav" data-view="pilotage"><span class="ic">📊</span> Pilotage</a>
       <div class="spacer"></div>
       <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
     </aside>
@@ -265,7 +268,7 @@ async function boot(){
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie'};
+const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP'};
 const el=id=>document.getElementById(id);
 function render(){
   el('title').textContent=TITLES[view]||'HUB';
@@ -277,6 +280,9 @@ function render(){
   if(view==='taches')return renderTaches();
   if(view==='finances')return renderFinances();
   if(view==='treso')return renderTreso();
+  if(view==='immobilier')return renderImmobilier();
+  if(view==='contenu')return renderContenu();
+  if(view==='pilotage')return renderPilotage();
   if(view==='cockpit')return renderCockpit();
 }
 function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
@@ -367,6 +373,7 @@ function openContact(c){
     <div class="field"><label>Notes</label><textarea id="f_notes">${c.notes||''}</textarea></div>
     <div class="actions">
       ${isEdit?`<button class="del" onclick='delContact("${c.id}")'>Supprimer</button>`:''}
+      ${c.email?`<button class="btn sec sm" onclick='openEmail(${JSON.stringify(c.email)}, ${JSON.stringify(((c.prenom||'')+' '+c.nom).trim())}, ${c.id?JSON.stringify(c.id):'null'})'>✉️ Email</button>`:''}
       <button class="btn sec sm" onclick="closeModal()">Annuler</button>
       <button class="btn sm" id="save">${isEdit?'Enregistrer':'Créer'}</button>
     </div>
@@ -399,6 +406,28 @@ async function delContact(id){
   if(!confirm('Supprimer ce contact ?'))return;
   try{await sb('contacts?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderContacts();}
   catch(e){alert('Erreur : '+e.message);}
+}
+/* EMAIL (via fonction sécurisée + Brevo) */
+function openEmail(to,name,contactId){
+  openModal(`<h3>✉️ Email à ${name||to}</h3>
+    <p class="muted" style="font-size:12px;margin:-6px 0 14px">Depuis nicolas@rsvp-club.com · enregistré dans l'historique du contact</p>
+    <div class="field"><label>Objet</label><input id="e_subj"></div>
+    <div class="field"><label>Message</label><textarea id="e_body" style="min-height:150px"></textarea></div>
+    <div class="actions"><button class="btn sec sm" onclick="closeModal()">Annuler</button><button class="btn sm" id="e_send">Envoyer</button></div>
+    <div class="err" id="e_err"></div>`);
+  el('e_send').onclick=()=>sendEmail(to,name,contactId);
+}
+async function sendEmail(to,name,contactId){
+  const subject=el('e_subj').value.trim(), text=el('e_body').value.trim();
+  if(!subject||!text){el('e_err').textContent='Objet et message requis.';return;}
+  el('e_send').textContent='Envoi…';el('e_send').disabled=true;
+  try{
+    const r=await fetch(SUPA_URL+'/functions/v1/send-email',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({to,toName:name,subject,text})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.error)throw new Error(d.error||('HTTP '+r.status));
+    if(contactId){try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subject,contenu:text,contact_id:contactId,source:'hub'})});}catch(e){}}
+    el('modal').innerHTML='<h3>✅ Email envoyé</h3><p class="muted">À '+(name||to)+' — enregistré dans l’historique du contact.</p><div class="actions"><button class="btn sm" onclick="closeModal()">Fermer</button></div>';
+  }catch(e){el('e_err').textContent='Erreur : '+e.message;el('e_send').textContent='Réessayer';el('e_send').disabled=false;}
 }
 
 /* ORGS */
@@ -706,6 +735,20 @@ async function saveTreso(){
   try{await sb('treso_snapshot?id=eq.1',{method:'PATCH',body:JSON.stringify(body)});closeModal();renderTreso();}
   catch(e){el('tserr').textContent='Erreur : '+e.message;}
 }
+
+/* ARTIFACTS INTÉGRÉS */
+let immoSub='isa';
+function frame(src){return `<iframe src="./${src}" style="width:100%;height:calc(100vh - 160px);border:1px solid var(--line);border-radius:14px;background:#0f1420"></iframe>`;}
+function renderImmobilier(){
+  el('content').innerHTML=`<div class="toolbar">
+    <span class="chip ${immoSub==='isa'?'on':''}" id="im_isa">Simulateur ISA</span>
+    <span class="chip ${immoSub==='edolo'?'on':''}" id="im_edolo">Rénovation Edolo</span>
+  </div>`+frame(immoSub==='isa'?'immobilier-isa.html':'edolo.html');
+  el('im_isa').onclick=()=>{immoSub='isa';renderImmobilier();};
+  el('im_edolo').onclick=()=>{immoSub='edolo';renderImmobilier();};
+}
+function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
+function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
 
 /* COCKPIT */
 async function renderCockpit(){
