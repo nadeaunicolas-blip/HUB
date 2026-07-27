@@ -83,7 +83,18 @@
     .ovnav.on{display:block}
   }
   .burger{display:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:8px 11px;font-size:16px}
+  #cal .fc{--fc-border-color:#333330;--fc-page-bg-color:transparent;--fc-neutral-bg-color:#212120;--fc-today-bg-color:rgba(57,135,229,.15);--fc-list-event-hover-bg-color:#212120}
+  #cal .fc a,#cal .fc .fc-col-header-cell-cushion,#cal .fc .fc-daygrid-day-number,#cal .fc .fc-list-day-text,#cal .fc .fc-list-event-time,#cal .fc .fc-timegrid-slot-label-cushion{color:#c3c2b7!important;text-decoration:none}
+  #cal .fc .fc-toolbar-title{color:#fff;font-size:18px}
+  #cal .fc .fc-button{background:#1a1a19;border:1px solid #333330;color:#fff;text-transform:capitalize;box-shadow:none}
+  #cal .fc .fc-button-primary:not(:disabled).fc-button-active,#cal .fc .fc-button-primary:not(:disabled):active{background:#3987e5;border-color:#3987e5}
+  #cal .fc-event{background:#3987e5;border-color:#3987e5;color:#fff;font-size:12px;padding:1px 3px;cursor:pointer}
+  @media(max-width:600px){#cal .fc-toolbar.fc-header-toolbar{flex-direction:column;gap:8px}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales-all.global.min.js"></script>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
 <body>
 
@@ -106,6 +117,7 @@
     <aside class="side" id="side">
       <div class="brand">HUB <small>· Nico</small></div>
       <a class="nav" data-view="cockpit"><span class="ic">◎</span> Cockpit</a>
+      <a class="nav" data-view="agenda"><span class="ic">📅</span> Agenda</a>
       <a class="nav active" data-view="contacts"><span class="ic">👤</span> Contacts</a>
       <a class="nav" data-view="orgs"><span class="ic">🏢</span> Organisations</a>
       <a class="nav" data-view="pipeline"><span class="ic">📈</span> Pipeline</a>
@@ -268,7 +280,7 @@ async function boot(){
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP'};
+const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda'};
 const el=id=>document.getElementById(id);
 function render(){
   el('title').textContent=TITLES[view]||'HUB';
@@ -283,6 +295,7 @@ function render(){
   if(view==='immobilier')return renderImmobilier();
   if(view==='contenu')return renderContenu();
   if(view==='pilotage')return renderPilotage();
+  if(view==='agenda')return renderAgenda();
   if(view==='cockpit')return renderCockpit();
 }
 function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
@@ -766,6 +779,23 @@ function renderImmobilier(){
 }
 function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
 function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
+
+/* AGENDA — vrai calendrier (FullCalendar) */
+let _cal=null;
+async function renderAgenda(){
+  el('content').innerHTML='<div id="cal" style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px"></div>';
+  let evs=[];try{evs=await sb('agenda_cache?select=*&order=debut.asc&limit=2000');}catch(e){}
+  const events=evs.map(e=>({title:e.titre,start:e.debut,end:e.fin||undefined,extendedProps:{lieu:e.lieu||''}}));
+  if(typeof FullCalendar==='undefined'){el('cal').innerHTML='<div class="empty">Le calendrier n’a pas pu se charger. Recharge la page (Cmd+Shift+R).</div>';return;}
+  _cal=new FullCalendar.Calendar(el('cal'),{
+    initialView:'dayGridMonth',locale:'fr',height:'auto',firstDay:1,nowIndicator:true,
+    headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,timeGridWeek,timeGridDay,listMonth'},
+    buttonText:{today:"Aujourd'hui",month:'Mois',week:'Semaine',day:'Jour',list:'Liste'},
+    events,
+    eventClick:(info)=>{const l=info.event.extendedProps.lieu;alert(info.event.title+(l?'\n📍 '+l:''));}
+  });
+  _cal.render();
+}
 
 /* COCKPIT */
 async function renderCockpit(){
