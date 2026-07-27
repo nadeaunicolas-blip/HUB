@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HUB — Nico</title>
+<style>
+  :root{
+    --bg:#111110;--surface:#1a1a19;--surface2:#212120;--line:#333330;
+    --text:#fff;--mut:#c3c2b7;--mut2:#8a897f;
+    --rsvp:#3987e5;--nws:#d95926;--immobilier:#199e70;--perso:#8a897f;
+    --good:#31c48d;--warn:#e0a415;--crit:#e66767;--accent:#3987e5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit}
+  /* LOGIN */
+  #login{display:flex;align-items:center;justify-content:center;height:100vh;padding:20px}
+  .loginbox{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px}
+  .loginbox h1{margin:0 0 4px;font-size:24px}
+  .loginbox p{margin:0 0 20px;color:var(--mut2);font-size:13px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px}
+  .field input,.field select,.field textarea{width:100%;padding:11px 12px;background:var(--surface2);
+    border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:14px}
+  .btn{width:100%;padding:12px;background:var(--accent);border:0;border-radius:10px;color:#fff;font-weight:700;font-size:14px}
+  .btn.sec{background:var(--surface2);border:1px solid var(--line);color:var(--text)}
+  .btn.sm{width:auto;padding:8px 14px;font-size:13px}
+  .err{color:var(--crit);font-size:13px;margin-top:10px;min-height:16px}
+  /* APP LAYOUT */
+  #app{display:none;height:100vh}
+  .layout{display:grid;grid-template-columns:220px 1fr;height:100vh}
+  .side{background:var(--surface);border-right:1px solid var(--line);padding:16px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+  .brand{font-size:18px;font-weight:800;padding:6px 10px 14px}
+  .brand small{color:var(--mut2);font-weight:600}
+  .nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:var(--mut);font-size:14px;font-weight:600}
+  .nav:hover{background:var(--surface2);color:var(--text)}
+  .nav.active{background:var(--surface2);color:var(--text)}
+  .nav .ic{width:18px;text-align:center}
+  .nav .soon{margin-left:auto;font-size:9px;color:var(--mut2);font-weight:700;text-transform:uppercase}
+  .side .spacer{flex:1}
+  .main{overflow-y:auto;padding:22px 24px 60px}
+  .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .head h2{margin:0;font-size:22px}
+  .head .u{font-size:12px;color:var(--mut2)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .toolbar input[type=search]{flex:1;min-width:160px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:14px}
+  .chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--mut);font-size:12.5px;font-weight:600}
+  .chip.on{background:var(--surface2);color:var(--text);border-color:var(--mut2)}
+  /* CARDS/TABLE */
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+  .item:hover{border-color:var(--mut2)}
+  .av{width:38px;height:38px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;background:var(--surface2)}
+  .item .b{flex:1;min-width:0}
+  .item .n{font-size:14.5px;font-weight:700;line-height:1.2}
+  .item .s{font-size:12px;color:var(--mut2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:46%}
+  .tg{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:3px 7px;border-radius:6px;white-space:nowrap}
+  .empty{text-align:center;color:var(--mut2);padding:50px 20px;font-size:14px}
+  .muted{color:var(--mut2)}
+  /* MODAL */
+  .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);align-items:flex-end;justify-content:center;z-index:50}
+  .ov.on{display:flex}
+  .modal{width:100%;max-width:520px;background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 0 0;padding:20px;max-height:92vh;overflow-y:auto}
+  @media(min-width:600px){.ov{align-items:center}.modal{border-radius:18px}}
+  .modal h3{margin:0 0 16px;font-size:18px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .selgrid{display:flex;flex-wrap:wrap;gap:6px}
+  .selgrid button{padding:7px 11px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--mut);font-size:12.5px;font-weight:600}
+  .selgrid button.on{color:#fff}
+  .modal .actions{display:flex;gap:10px;margin-top:18px}
+  .modal textarea{min-height:70px;resize:vertical}
+  .del{color:var(--crit);background:transparent;border:0;font-size:13px;font-weight:600;margin-right:auto;padding:0}
+  @media(max-width:720px){
+    .layout{grid-template-columns:1fr}
+    .side{position:fixed;left:0;top:0;bottom:0;width:230px;transform:translateX(-100%);transition:.2s;z-index:40}
+    .side.open{transform:none}
+    .burger{display:inline-flex!important}
+    .ovnav{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:35}
+    .ovnav.on{display:block}
+  }
+  .burger{display:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:8px 11px;font-size:16px}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login">
+  <form class="loginbox" id="loginform" autocomplete="on">
+    <h1>HUB</h1>
+    <p>Ta tour de contrôle · RSVP · NWS · Immobilier</p>
+    <div class="field"><label>Email</label><input id="lemail" name="username" type="email" autocomplete="username" placeholder="nadeau.nicolas@gmail.com"></div>
+    <div class="field"><label>Mot de passe</label><input id="lpass" name="password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn" id="lbtn" type="submit">Se connecter</button>
+    <div class="err" id="lerr"></div>
+  </form>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <div class="ovnav" id="ovnav" onclick="toggleNav(false)"></div>
+  <div class="layout">
+    <aside class="side" id="side">
+      <div class="brand">HUB <small>· Nico</small></div>
+      <a class="nav" data-view="cockpit"><span class="ic">◎</span> Cockpit</a>
+      <a class="nav active" data-view="contacts"><span class="ic">👤</span> Contacts</a>
+      <a class="nav" data-view="orgs"><span class="ic">🏢</span> Organisations</a>
+      <a class="nav" data-view="pipeline"><span class="ic">📈</span> Pipeline</a>
+      <a class="nav" data-view="projets"><span class="ic">🎯</span> Projets</a>
+      <a class="nav" data-view="taches"><span class="ic">✅</span> Tâches</a>
+      <a class="nav" data-view="finances"><span class="ic">💶</span> Finances</a>
+      <div class="spacer"></div>
+      <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
+    </aside>
+    <main class="main">
+      <div class="head">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="burger" onclick="toggleNav(true)">☰</button>
+          <h2 id="title">Contacts</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="u" id="whoami"></span>
+          <button class="btn sm" id="addbtn">+ Nouveau</button>
+        </div>
+      </div>
+      <div id="content"></div>
+    </main>
+  </div>
+</div>
+
+<!-- ══ MODAL ══ -->
+<div class="ov" id="ov">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+const SUPA_URL = "https://rdursbdlxaxrwafyyqwv.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkdXJzYmRseGF4cndhZnl5cXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDc4NzQsImV4cCI6MjEwMDcyMzg3NH0.4wxwNnPbWsp_KVgH7GanEpKxKpg7imxyuvkDoB2UJiY";
+
+const ROLES = ['client','prospect','fournisseur','partenaire','financeur'];
+const PILIERS = [['rsvp','RSVP'],['nws','NWS'],['immobilier','Immobilier'],['perso','Perso']];
+const PIL_COLOR = {rsvp:'var(--rsvp)',nws:'var(--nws)',immobilier:'var(--immobilier)',perso:'var(--perso)'};
+const ROLE_LABEL = {client:'Client',prospect:'Prospect',fournisseur:'Fournisseur',partenaire:'Partenaire',financeur:'Financeur'};
+const STAGES = [['nouveau','Nouveau'],['qualifie','Qualifié'],['proposition','Proposition'],['negociation','Négociation'],['gagne','Gagné'],['perdu','Perdu']];
+
+let token=null, email=null, view='contacts';
+let cacheOrgs=[], cacheContacts=[];
+let filterRole=null, filterPil=null, search='';
+
+/* ───── API ───── */
+async function sb(path, opts={}, _retry){
+  const r = await fetch(SUPA_URL+'/rest/v1/'+path, {
+    ...opts,
+    headers:{
+      'apikey':SUPA_KEY,
+      'Authorization':'Bearer '+(token||SUPA_KEY),
+      'Content-Type':'application/json',
+      'Prefer':opts.prefer||'return=representation',
+      ...(opts.headers||{})
+    }
+  });
+  if(r.status===401 && !_retry){
+    try{const raw=localStorage.getItem('hub_session');
+      if(raw){const f=await tryRefresh(JSON.parse(raw)); if(f){token=f; return sb(path,opts,true);}}
+    }catch(e){}
+  }
+  if(!r.ok){ const t=await r.text(); throw new Error(t||r.status); }
+  if(r.status===204) return null;
+  const txt=await r.text(); return txt?JSON.parse(txt):null;
+}
+
+/* ───── AUTH ───── */
+function saveSession(d,em){
+  try{
+    localStorage.setItem('hub_session',JSON.stringify({
+      email:em,access_token:d.access_token,refresh_token:d.refresh_token,
+      expires_at:d.expires_at||(Math.floor(Date.now()/1000)+(d.expires_in||3600))
+    }));
+    localStorage.setItem('hub_email',em);
+  }catch(e){}
+}
+function enterApp(access,em){
+  token=access; email=em;
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('whoami').textContent=em;
+  boot();
+}
+async function login(){
+  const em=document.getElementById('lemail').value.trim();
+  const pw=document.getElementById('lpass').value;
+  const errEl=document.getElementById('lerr'); errEl.textContent='';
+  if(!em||!pw){errEl.textContent='Email et mot de passe requis.';return;}
+  document.getElementById('lbtn').textContent='Connexion…';
+  try{
+    const r=await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:em,password:pw})
+    });
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error_description||d.msg||'Identifiants invalides');
+    saveSession(d,em);
+    enterApp(d.access_token,em);
+  }catch(e){ errEl.textContent=e.message; }
+  document.getElementById('lbtn').textContent='Se connecter';
+}
+async function tryRefresh(sess){
+  try{
+    const r=await fetch(SUPA_URL+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:sess.refresh_token})
+    });
+    const d=await r.json();
+    if(!r.ok) throw new Error('refresh');
+    saveSession(d,sess.email); return d.access_token;
+  }catch(e){ return null; }
+}
+document.getElementById('loginform').addEventListener('submit',e=>{e.preventDefault();login();});
+document.getElementById('logout').onclick=()=>{try{localStorage.removeItem('hub_session');}catch(e){}token=null;location.reload();};
+
+/* Restauration : email mémorisé + reste connecté */
+(async function restore(){
+  try{
+    const em=localStorage.getItem('hub_email');
+    if(em)document.getElementById('lemail').value=em;
+    const raw=localStorage.getItem('hub_session'); if(!raw)return;
+    const sess=JSON.parse(raw); const now=Math.floor(Date.now()/1000);
+    if(sess.access_token&&sess.expires_at&&sess.expires_at>now+60){enterApp(sess.access_token,sess.email);return;}
+    const fresh=await tryRefresh(sess); if(fresh)enterApp(fresh,sess.email);
+  }catch(e){}
+})();
+
+/* ───── NAV ───── */
+document.querySelectorAll('.nav[data-view]').forEach(n=>{
+  n.onclick=()=>{
+    const v=n.dataset.view; if(v==='soon')return;
+    document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
+    n.classList.add('active'); view=v; toggleNav(false); render();
+  };
+});
+function toggleNav(open){
+  document.getElementById('side').classList.toggle('open',open);
+  document.getElementById('ovnav').classList.toggle('on',open);
+}
+document.getElementById('addbtn').onclick=()=>{
+  if(view==='contacts')openContact();
+  else if(view==='orgs')openOrg();
+  else if(view==='pipeline')openOppo();
+  else if(view==='projets')openProjet();
+  else if(view==='taches')openTache();
+  else if(view==='finances')openFin();
+};
+
+/* ───── BOOT ───── */
+async function boot(){
+  try{ cacheOrgs=await sb('organisations?select=*&order=nom'); }catch(e){ cacheOrgs=[]; }
+  try{ cacheContacts=await sb('contacts?select=*&order=nom'); }catch(e){ cacheContacts=[]; }
+  render();
+}
+
+/* ───── RENDER ───── */
+const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances'};
+const el=id=>document.getElementById(id);
+function render(){
+  el('title').textContent=TITLES[view]||'HUB';
+  el('addbtn').style.display=['contacts','orgs','pipeline','projets','taches','finances'].includes(view)?'':'none';
+  if(view==='contacts')return renderContacts();
+  if(view==='orgs')return renderOrgs();
+  if(view==='pipeline')return renderPipeline();
+  if(view==='projets')return renderProjets();
+  if(view==='taches')return renderTaches();
+  if(view==='finances')return renderFinances();
+  if(view==='cockpit')return renderCockpit();
+}
+function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
+
+/* CONTACTS */
+async function renderContacts(){
+  el('content').innerHTML=`
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Rechercher un contact…" value="${search}">
+    </div>
+    <div class="toolbar" id="filters"></div>
+    <div id="clist" class="list"><div class="empty">Chargement…</div></div>`;
+  const fl=el('filters');
+  fl.innerHTML='<span class="chip '+(!filterRole?'on':'')+'" data-r="">Tous rôles</span>'+
+    ROLES.map(r=>`<span class="chip ${filterRole===r?'on':''}" data-r="${r}">${ROLE_LABEL[r]}</span>`).join('')+
+    '&nbsp;&nbsp;'+'<span class="chip '+(!filterPil?'on':'')+'" data-p="">Tous piliers</span>'+
+    PILIERS.map(([k,l])=>`<span class="chip ${filterPil===k?'on':''}" data-p="${k}">${l}</span>`).join('');
+  fl.querySelectorAll('[data-r]').forEach(c=>c.onclick=()=>{filterRole=c.dataset.r||null;renderContacts();});
+  fl.querySelectorAll('[data-p]').forEach(c=>c.onclick=()=>{filterPil=c.dataset.p||null;renderContacts();});
+  el('q').oninput=e=>{search=e.target.value;drawContacts();};
+  try{ cacheContacts=await sb('contacts?select=*&order=nom'); }catch(e){ el('clist').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
+  drawContacts();
+}
+function drawContacts(){
+  let rows=cacheContacts.slice();
+  if(filterRole)rows=rows.filter(c=>(c.roles||[]).includes(filterRole));
+  if(filterPil)rows=rows.filter(c=>(c.piliers||[]).includes(filterPil));
+  if(search){const s=search.toLowerCase();rows=rows.filter(c=>((c.prenom||'')+' '+(c.nom||'')+' '+(c.email||'')).toLowerCase().includes(s));}
+  const orgName=id=>{const o=cacheOrgs.find(o=>o.id===id);return o?o.nom:'';};
+  if(!rows.length){el('clist').innerHTML='<div class="empty">Aucun contact.<br>Clique « + Nouveau » pour en ajouter un.</div>';return;}
+  el('clist').innerHTML=rows.map(c=>`
+    <div class="item" onclick='openContact(${JSON.stringify(c).replace(/'/g,"&#39;")})'>
+      <div class="av">${initials(c)}</div>
+      <div class="b">
+        <div class="n">${(c.prenom||'')+' '+c.nom}</div>
+        <div class="s">${[orgName(c.organisation_id),c.poste,c.email].filter(Boolean).join(' · ')||'—'}</div>
+      </div>
+      <div class="tags">
+        ${(c.piliers||[]).map(p=>`<span class="tg" style="background:${PIL_COLOR[p]}22;color:${PIL_COLOR[p]}">${p}</span>`).join('')}
+        ${(c.roles||[]).map(r=>`<span class="tg" style="background:#8a897f22;color:var(--mut)">${ROLE_LABEL[r]}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+/* MODAL helpers */
+function openModal(html){el('modal').innerHTML=html;el('ov').classList.add('on');}
+function closeModal(){el('ov').classList.remove('on');}
+el('ov').onclick=e=>{if(e.target===el('ov'))closeModal();};
+
+function multiSel(id,options,selected){
+  return `<div class="selgrid" id="${id}">`+options.map(([k,l])=>
+    `<button type="button" data-v="${k}" class="${selected.includes(k)?'on':''}" style="${selected.includes(k)&&PIL_COLOR[k]?'background:'+PIL_COLOR[k]:''}">${l}</button>`).join('')+`</div>`;
+}
+function wireMulti(id){el(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  b.classList.toggle('on');
+  const v=b.dataset.v; if(PIL_COLOR[v])b.style.background=b.classList.contains('on')?PIL_COLOR[v]:'';
+});}
+function getMulti(id){return [...el(id).querySelectorAll('button.on')].map(b=>b.dataset.v);}
+
+/* CONTACT FORM */
+function openContact(c){
+  c=c||{};const isEdit=!!c.id;
+  const orgOpts='<option value="">— aucune —</option>'+cacheOrgs.map(o=>`<option value="${o.id}" ${c.organisation_id===o.id?'selected':''}>${o.nom}</option>`).join('');
+  openModal(`
+    <h3>${isEdit?'Modifier le contact':'Nouveau contact'}</h3>
+    <div class="row2">
+      <div class="field"><label>Prénom</label><input id="f_prenom" value="${c.prenom||''}"></div>
+      <div class="field"><label>Nom *</label><input id="f_nom" value="${c.nom||''}"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Email</label><input id="f_email" value="${c.email||''}"></div>
+      <div class="field"><label>Téléphone</label><input id="f_tel" value="${c.telephone||''}"></div>
+    </div>
+    <div class="field"><label>Organisation</label><select id="f_org">${orgOpts}</select></div>
+    <div class="field"><label>Poste</label><input id="f_poste" value="${c.poste||''}"></div>
+    <div class="field"><label>Rôles</label>${multiSel('f_roles',ROLES.map(r=>[r,ROLE_LABEL[r]]),c.roles||[])}</div>
+    <div class="field"><label>Piliers</label>${multiSel('f_piliers',PILIERS,c.piliers||[])}</div>
+    <div class="field"><label>Source</label><input id="f_source" value="${c.source||''}" placeholder="vibe, common room, bni, referral…"></div>
+    <div class="field"><label>Notes</label><textarea id="f_notes">${c.notes||''}</textarea></div>
+    <div class="actions">
+      ${isEdit?`<button class="del" onclick='delContact("${c.id}")'>Supprimer</button>`:''}
+      <button class="btn sec sm" onclick="closeModal()">Annuler</button>
+      <button class="btn sm" id="save">${isEdit?'Enregistrer':'Créer'}</button>
+    </div>
+    <div class="err" id="ferr"></div>`);
+  wireMulti('f_roles');wireMulti('f_piliers');
+  el('save').onclick=()=>saveContact(c.id);
+}
+async function saveContact(id){
+  const body={
+    prenom:el('f_prenom').value.trim()||null,
+    nom:el('f_nom').value.trim(),
+    email:el('f_email').value.trim()||null,
+    telephone:el('f_tel').value.trim()||null,
+    organisation_id:el('f_org').value||null,
+    poste:el('f_poste').value.trim()||null,
+    roles:getMulti('f_roles'),
+    piliers:getMulti('f_piliers'),
+    source:el('f_source').value.trim()||null,
+    notes:el('f_notes').value.trim()||null
+  };
+  if(!body.nom){el('ferr').textContent='Le nom est requis.';return;}
+  el('save').textContent='…';
+  try{
+    if(id)await sb('contacts?id=eq.'+id,{method:'PATCH',body:JSON.stringify(body)});
+    else await sb('contacts',{method:'POST',body:JSON.stringify(body)});
+    closeModal();renderContacts();
+  }catch(e){el('ferr').textContent='Erreur : '+e.message;el('save').textContent='Réessayer';}
+}
+async function delContact(id){
+  if(!confirm('Supprimer ce contact ?'))return;
+  try{await sb('contacts?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderContacts();}
+  catch(e){alert('Erreur : '+e.message);}
+}
+
+/* ORGS */
+async function renderOrgs(){
+  el('content').innerHTML='<div id="olist" class="list"><div class="empty">Chargement…</div></div>';
+  try{cacheOrgs=await sb('organisations?select=*&order=nom');}catch(e){el('olist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
+  if(!cacheOrgs.length){el('olist').innerHTML='<div class="empty">Aucune organisation.<br>Clique « + Nouveau ».</div>';return;}
+  el('olist').innerHTML=cacheOrgs.map(o=>`
+    <div class="item" onclick='openOrg(${JSON.stringify(o).replace(/'/g,"&#39;")})'>
+      <div class="av">🏢</div>
+      <div class="b"><div class="n">${o.nom}</div><div class="s">${[o.type,o.ville,o.secteur].filter(Boolean).join(' · ')||'—'}</div></div>
+    </div>`).join('');
+}
+function openOrg(o){
+  o=o||{};const isEdit=!!o.id;
+  const types=['client','prospect','fournisseur','partenaire','banque','institution','autre'];
+  openModal(`
+    <h3>${isEdit?'Modifier l\'organisation':'Nouvelle organisation'}</h3>
+    <div class="field"><label>Nom *</label><input id="o_nom" value="${o.nom||''}"></div>
+    <div class="row2">
+      <div class="field"><label>Type</label><select id="o_type">${types.map(t=>`<option ${o.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label>Ville</label><input id="o_ville" value="${o.ville||''}"></div>
+    </div>
+    <div class="field"><label>Secteur</label><input id="o_secteur" value="${o.secteur||''}"></div>
+    <div class="field"><label>Site web</label><input id="o_web" value="${o.site_web||''}"></div>
+    <div class="field"><label>Notes</label><textarea id="o_notes">${o.notes||''}</textarea></div>
+    <div class="actions">
+      ${isEdit?`<button class="del" onclick='delOrg("${o.id}")'>Supprimer</button>`:''}
+      <button class="btn sec sm" onclick="closeModal()">Annuler</button>
+      <button class="btn sm" id="osave">${isEdit?'Enregistrer':'Créer'}</button>
+    </div>
+    <div class="err" id="oerr"></div>`);
+  el('osave').onclick=()=>saveOrg(o.id);
+}
+async function saveOrg(id){
+  const body={nom:el('o_nom').value.trim(),type:el('o_type').value,ville:el('o_ville').value.trim()||null,
+    secteur:el('o_secteur').value.trim()||null,site_web:el('o_web').value.trim()||null,notes:el('o_notes').value.trim()||null};
+  if(!body.nom){el('oerr').textContent='Le nom est requis.';return;}
+  try{
+    if(id)await sb('organisations?id=eq.'+id,{method:'PATCH',body:JSON.stringify(body)});
+    else await sb('organisations',{method:'POST',body:JSON.stringify(body)});
+    cacheOrgs=await sb('organisations?select=*&order=nom');closeModal();render();
+  }catch(e){el('oerr').textContent='Erreur : '+e.message;}
+}
+async function delOrg(id){if(!confirm('Supprimer ?'))return;try{await sb('organisations?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});cacheOrgs=await sb('organisations?select=*&order=nom');closeModal();render();}catch(e){alert(e.message);}}
+
+/* PIPELINE */
+async function renderPipeline(){
+  el('content').innerHTML='<div id="plist" class="list"><div class="empty">Chargement…</div></div>';
+  let ops;try{ops=await sb('opportunites?select=*&order=created_at.desc');}catch(e){el('plist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
+  if(!ops.length){el('plist').innerHTML='<div class="empty">Aucune opportunité.<br>Clique « + Nouveau » pour créer un deal.</div>';return;}
+  const stLabel=Object.fromEntries(STAGES);
+  el('plist').innerHTML=ops.map(o=>`
+    <div class="item" onclick='openOppo(${JSON.stringify(o).replace(/'/g,"&#39;")})'>
+      <div class="av" style="background:${PIL_COLOR[o.pilier]}22;color:${PIL_COLOR[o.pilier]}">${(o.pilier||'?')[0].toUpperCase()}</div>
+      <div class="b"><div class="n">${o.nom}</div><div class="s">${stLabel[o.stage]||o.stage}${o.prochaine_action?' · '+o.prochaine_action:''}</div></div>
+      <div class="tags"><span class="tg" style="background:#31c48d22;color:var(--good)">${o.valeur?Math.round(o.valeur).toLocaleString('fr-FR')+' €':'—'}</span></div>
+    </div>`).join('');
+}
+function openOppo(o){
+  o=o||{};const isEdit=!!o.id;
+  const cOpts='<option value="">— contact —</option>'+cacheContacts.map(c=>`<option value="${c.id}" ${o.contact_id===c.id?'selected':''}>${(c.prenom||'')+' '+c.nom}</option>`).join('');
+  openModal(`
+    <h3>${isEdit?'Modifier l\'opportunité':'Nouvelle opportunité'}</h3>
+    <div class="field"><label>Nom *</label><input id="p_nom" value="${o.nom||''}"></div>
+    <div class="row2">
+      <div class="field"><label>Pilier</label><select id="p_pil">${PILIERS.map(([k,l])=>`<option value="${k}" ${o.pilier===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Étape</label><select id="p_stage">${STAGES.map(([k,l])=>`<option value="${k}" ${o.stage===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Valeur (€)</label><input id="p_val" type="number" value="${o.valeur||''}"></div>
+      <div class="field"><label>Probabilité (%)</label><input id="p_prob" type="number" value="${o.probabilite||''}"></div>
+    </div>
+    <div class="field"><label>Contact</label><select id="p_contact">${cOpts}</select></div>
+    <div class="field"><label>Prochaine action</label><input id="p_next" value="${o.prochaine_action||''}"></div>
+    <div class="actions">
+      ${isEdit?`<button class="del" onclick='delOppo("${o.id}")'>Supprimer</button>`:''}
+      <button class="btn sec sm" onclick="closeModal()">Annuler</button>
+      <button class="btn sm" id="psave">${isEdit?'Enregistrer':'Créer'}</button>
+    </div>
+    <div class="err" id="perr"></div>`);
+  el('psave').onclick=()=>saveOppo(o.id);
+}
+async function saveOppo(id){
+  const body={nom:el('p_nom').value.trim(),pilier:el('p_pil').value,stage:el('p_stage').value,
+    valeur:el('p_val').value?+el('p_val').value:null,probabilite:el('p_prob').value?+el('p_prob').value:null,
+    contact_id:el('p_contact').value||null,prochaine_action:el('p_next').value.trim()||null};
+  if(!body.nom){el('perr').textContent='Le nom est requis.';return;}
+  try{
+    if(id)await sb('opportunites?id=eq.'+id,{method:'PATCH',body:JSON.stringify(body)});
+    else await sb('opportunites',{method:'POST',body:JSON.stringify(body)});
+    closeModal();renderPipeline();
+  }catch(e){el('perr').textContent='Erreur : '+e.message;}
+}
+async function delOppo(id){if(!confirm('Supprimer ?'))return;try{await sb('opportunites?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderPipeline();}catch(e){alert(e.message);}}
+
+/* PROJETS */
+async function renderProjets(){
+  el('content').innerHTML='<div id="jlist" class="list"><div class="empty">Chargement…</div></div>';
+  let js;try{js=await sb('projets?select=*&order=created_at.desc');}catch(e){el('jlist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
+  if(!js.length){el('jlist').innerHTML='<div class="empty">Aucun projet.<br>Clique « + Nouveau ».</div>';return;}
+  el('jlist').innerHTML=js.map(p=>`
+    <div class="item" onclick='openProjet(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
+      <div class="av" style="background:${PIL_COLOR[p.pilier]}22;color:${PIL_COLOR[p.pilier]}">${(p.pilier||'?')[0].toUpperCase()}</div>
+      <div class="b"><div class="n">${p.nom}</div><div class="s">${p.statut}${p.date_echeance?' · échéance '+p.date_echeance:''}</div></div>
+      <div class="tags"><span class="tg" style="background:#8a897f22;color:var(--mut)">${p.avancement||0}%</span></div>
+    </div>`).join('');
+}
+function openProjet(p){
+  p=p||{};const isEdit=!!p.id;
+  const stt=['idee','en_cours','en_pause','termine','abandonne'];
+  openModal(`
+    <h3>${isEdit?'Modifier le projet':'Nouveau projet'}</h3>
+    <div class="field"><label>Nom *</label><input id="j_nom" value="${p.nom||''}"></div>
+    <div class="row2">
+      <div class="field"><label>Pilier</label><select id="j_pil">${PILIERS.map(([k,l])=>`<option value="${k}" ${p.pilier===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Statut</label><select id="j_stat">${stt.map(s=>`<option ${p.statut===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Budget (€)</label><input id="j_bud" type="number" value="${p.budget||''}"></div>
+      <div class="field"><label>Avancement (%)</label><input id="j_av" type="number" value="${p.avancement||0}"></div>
+    </div>
+    <div class="field"><label>Échéance</label><input id="j_ech" type="date" value="${p.date_echeance||''}"></div>
+    <div class="field"><label>Description</label><textarea id="j_desc">${p.description||''}</textarea></div>
+    <div class="actions">
+      ${isEdit?`<button class="del" onclick='delProjet("${p.id}")'>Supprimer</button>`:''}
+      <button class="btn sec sm" onclick="closeModal()">Annuler</button>
+      <button class="btn sm" id="jsave">${isEdit?'Enregistrer':'Créer'}</button>
+    </div>
+    <div class="err" id="jerr"></div>`);
+  el('jsave').onclick=()=>saveProjet(p.id);
+}
+async function saveProjet(id){
+  const body={nom:el('j_nom').value.trim(),pilier:el('j_pil').value,statut:el('j_stat').value,
+    budget:el('j_bud').value?+el('j_bud').value:null,avancement:el('j_av').value?+el('j_av').value:0,
+    date_echeance:el('j_ech').value||null,description:el('j_desc').value.trim()||null};
+  if(!body.nom){el('jerr').textContent='Le nom est requis.';return;}
+  try{
+    if(id)await sb('projets?id=eq.'+id,{method:'PATCH',body:JSON.stringify(body)});
+    else await sb('projets',{method:'POST',body:JSON.stringify(body)});
+    closeModal();renderProjets();
+  }catch(e){el('jerr').textContent='Erreur : '+e.message;}
+}
+async function delProjet(id){if(!confirm('Supprimer ?'))return;try{await sb('projets?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderProjets();}catch(e){alert(e.message);}}
+
+/* TÂCHES */
+const T_STAT=[['a_faire','À faire'],['en_cours','En cours'],['fait','Fait'],['annule','Annulé']];
+const PRIOS=[['p1','P1'],['p2','P2'],['p3','P3'],['p4','P4']];
+const PRIO_COLOR={p1:'var(--crit)',p2:'var(--warn)',p3:'var(--rsvp)',p4:'var(--mut2)'};
+let tFilter='ouvertes';
+async function renderTaches(){
+  el('content').innerHTML=`<div class="toolbar" id="tf"></div><div id="tlist" class="list"><div class="empty">Chargement…</div></div>`;
+  el('tf').innerHTML=[['ouvertes','Ouvertes'],['toutes','Toutes'],['p1','P1'],['fait','Faites']].map(([k,l])=>`<span class="chip ${tFilter===k?'on':''}" data-t="${k}">${l}</span>`).join('');
+  el('tf').querySelectorAll('[data-t]').forEach(c=>c.onclick=()=>{tFilter=c.dataset.t;renderTaches();});
+  let ts;try{ts=await sb('taches?select=*&order=echeance.asc.nullslast');}catch(e){el('tlist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
+  let rows=ts.slice();
+  if(tFilter==='ouvertes')rows=rows.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
+  else if(tFilter==='p1')rows=rows.filter(t=>t.priorite==='p1'&&t.statut!=='fait');
+  else if(tFilter==='fait')rows=rows.filter(t=>t.statut==='fait');
+  if(!rows.length){el('tlist').innerHTML='<div class="empty">Aucune tâche.</div>';return;}
+  const today=new Date();today.setHours(0,0,0,0);
+  el('tlist').innerHTML=rows.map(t=>{
+    const done=t.statut==='fait';
+    let due='';if(t.echeance){const d=new Date(t.echeance);const late=d<today&&!done;due=`<span class="tg" style="background:${late?'#e6676722':'#8a897f22'};color:${late?'var(--crit)':'var(--mut)'}">${d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}${late?' · retard':''}</span>`;}
+    return `<div class="item">
+      <div class="av" style="cursor:pointer;background:${done?'#31c48d22':'var(--surface2)'};color:${done?'var(--good)':'var(--mut2)'}" onclick='toggleTache("${t.id}","${done?'a_faire':'fait'}")'>${done?'✓':'○'}</div>
+      <div class="b" onclick='openTache(${JSON.stringify(t).replace(/'/g,"&#39;")})' style="cursor:pointer">
+        <div class="n" style="${done?'text-decoration:line-through;color:var(--mut2)':''}">${t.titre}</div>
+        <div class="s">${t.pilier||''}</div></div>
+      <div class="tags">${due}<span class="tg" style="background:${PRIO_COLOR[t.priorite]}22;color:${PRIO_COLOR[t.priorite]}">${(t.priorite||'p4').toUpperCase()}</span></div>
+    </div>`;
+  }).join('');
+}
+async function toggleTache(id,st){try{await sb('taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:st})});renderTaches();}catch(e){alert(e.message);}}
+function openTache(t){
+  t=t||{};const isEdit=!!t.id;
+  const cOpts='<option value="">—</option>'+cacheContacts.map(c=>`<option value="${c.id}" ${t.contact_id===c.id?'selected':''}>${(c.prenom||'')+' '+c.nom}</option>`).join('');
+  const ech=t.echeance?t.echeance.slice(0,10):'';
+  openModal(`
+    <h3>${isEdit?'Modifier la tâche':'Nouvelle tâche'}</h3>
+    <div class="field"><label>Titre *</label><input id="t_tit" value="${(t.titre||'').replace(/"/g,'&quot;')}"></div>
+    <div class="row2">
+      <div class="field"><label>Priorité</label><select id="t_prio">${PRIOS.map(([k,l])=>`<option value="${k}" ${t.priorite===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Statut</label><select id="t_stat">${T_STAT.map(([k,l])=>`<option value="${k}" ${t.statut===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Pilier</label><select id="t_pil"><option value="">—</option>${PILIERS.map(([k,l])=>`<option value="${k}" ${t.pilier===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Échéance</label><input id="t_ech" type="date" value="${ech}"></div>
+    </div>
+    <div class="field"><label>Contact lié</label><select id="t_contact">${cOpts}</select></div>
+    <div class="field"><label>Notes</label><textarea id="t_desc">${t.description||''}</textarea></div>
+    <div class="actions">
+      ${isEdit?`<button class="del" onclick='delTache("${t.id}")'>Supprimer</button>`:''}
+      <button class="btn sec sm" onclick="closeModal()">Annuler</button>
+      <button class="btn sm" id="tsave">${isEdit?'Enregistrer':'Créer'}</button>
+    </div><div class="err" id="terr"></div>`);
+  el('tsave').onclick=()=>saveTache(t.id);
+}
+async function saveTache(id){
+  const body={titre:el('t_tit').value.trim(),priorite:el('t_prio').value,statut:el('t_stat').value,
+    pilier:el('t_pil').value||null,echeance:el('t_ech').value||null,
+    contact_id:el('t_contact').value||null,description:el('t_desc').value.trim()||null};
+  if(!body.titre){el('terr').textContent='Le titre est requis.';return;}
+  try{if(id)await sb('taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify(body)});else await sb('taches',{method:'POST',body:JSON.stringify(body)});closeModal();renderTaches();}
+  catch(e){el('terr').textContent='Erreur : '+e.message;}
+}
+async function delTache(id){if(!confirm('Supprimer ?'))return;try{await sb('taches?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderTaches();}catch(e){alert(e.message);}}
+
+/* FINANCES */
+const F_STAT=[['prevu','Prévu'],['a_regler','À régler'],['regle','Réglé'],['en_retard','En retard']];
+async function renderFinances(){
+  el('content').innerHTML='<div id="flist" class="list"><div class="empty">Chargement…</div></div>';
+  let fs;try{fs=await sb('finances?select=*&order=date_echeance.asc.nullslast');}catch(e){el('flist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
+  if(!fs.length){el('flist').innerHTML='<div class="empty">Aucune ligne. Clique « + Nouveau ».</div>';return;}
+  const today=new Date();today.setHours(0,0,0,0);
+  const totOut=fs.filter(f=>f.sens==='sortie'&&f.statut!=='regle').reduce((s,f)=>s+(+f.montant||0),0);
+  el('flist').innerHTML=`<div class="item"><div class="b"><div class="s">Total à régler (sorties non réglées)</div><div class="n" style="font-size:20px;color:var(--crit)">−${Math.round(totOut).toLocaleString('fr-FR')} €</div></div></div>`+fs.map(f=>{
+    const out=f.sens==='sortie';const col=out?'var(--crit)':'var(--good)';
+    let due='';if(f.date_echeance&&f.statut!=='regle'){const d=new Date(f.date_echeance);const late=d<today;due=`<span class="tg" style="background:${late?'#e6676722':'#8a897f22'};color:${late?'var(--crit)':'var(--mut)'}">${d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</span>`;}
+    return `<div class="item" onclick='openFin(${JSON.stringify(f).replace(/'/g,"&#39;")})'>
+      <div class="av" style="background:${col}22;color:${col}">${out?'↓':'↑'}</div>
+      <div class="b"><div class="n">${f.libelle}</div><div class="s">${[f.type,f.pilier,f.statut].filter(Boolean).join(' · ')}</div></div>
+      <div class="tags">${due}<span class="tg" style="background:${col}22;color:${col}">${out?'−':'+'}${Math.round(f.montant).toLocaleString('fr-FR')} €</span></div>
+    </div>`;
+  }).join('');
+}
+function openFin(f){
+  f=f||{};const isEdit=!!f.id;
+  const types=[['echeance','Échéance'],['transaction','Transaction'],['dette','Dette']];
+  openModal(`
+    <h3>${isEdit?'Modifier':'Nouvelle ligne financière'}</h3>
+    <div class="field"><label>Libellé *</label><input id="x_lib" value="${(f.libelle||'').replace(/"/g,'&quot;')}"></div>
+    <div class="row2">
+      <div class="field"><label>Montant (€) *</label><input id="x_mt" type="number" value="${f.montant||''}"></div>
+      <div class="field"><label>Sens</label><select id="x_sens"><option value="sortie" ${f.sens!=='entree'?'selected':''}>Sortie</option><option value="entree" ${f.sens==='entree'?'selected':''}>Entrée</option></select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Type</label><select id="x_type">${types.map(([k,l])=>`<option value="${k}" ${f.type===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Statut</label><select id="x_stat">${F_STAT.map(([k,l])=>`<option value="${k}" ${f.statut===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Pilier</label><select id="x_pil"><option value="">—</option>${PILIERS.map(([k,l])=>`<option value="${k}" ${f.pilier===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Échéance</label><input id="x_ech" type="date" value="${f.date_echeance||''}"></div>
+    </div>
+    <div class="actions">
+      ${isEdit?`<button class="del" onclick='delFin("${f.id}")'>Supprimer</button>`:''}
+      <button class="btn sec sm" onclick="closeModal()">Annuler</button>
+      <button class="btn sm" id="xsave">${isEdit?'Enregistrer':'Créer'}</button>
+    </div><div class="err" id="xerr"></div>`);
+  el('xsave').onclick=()=>saveFin(f.id);
+}
+async function saveFin(id){
+  const body={libelle:el('x_lib').value.trim(),montant:el('x_mt').value?+el('x_mt').value:null,sens:el('x_sens').value,
+    type:el('x_type').value,statut:el('x_stat').value,pilier:el('x_pil').value||null,date_echeance:el('x_ech').value||null};
+  if(!body.libelle||body.montant==null){el('xerr').textContent='Libellé et montant requis.';return;}
+  try{if(id)await sb('finances?id=eq.'+id,{method:'PATCH',body:JSON.stringify(body)});else await sb('finances',{method:'POST',body:JSON.stringify(body)});closeModal();renderFinances();}
+  catch(e){el('xerr').textContent='Erreur : '+e.message;}
+}
+async function delFin(id){if(!confirm('Supprimer ?'))return;try{await sb('finances?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderFinances();}catch(e){alert(e.message);}}
+
+/* COCKPIT */
+async function renderCockpit(){
+  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  let ts=[],fs=[],nc=0;
+  try{ts=await sb('taches?select=*');}catch(e){}
+  try{fs=await sb('finances?select=*');}catch(e){}
+  try{nc=(await sb('contacts?select=id')).length;}catch(e){}
+  const today=new Date();today.setHours(0,0,0,0);
+  const in30=new Date(today);in30.setDate(in30.getDate()+30);
+  const open=ts.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
+  const late=open.filter(t=>t.echeance&&new Date(t.echeance)<today);
+  const p1=open.filter(t=>t.priorite==='p1');
+  const due=fs.filter(f=>f.sens==='sortie'&&f.statut!=='regle'&&f.date_echeance&&new Date(f.date_echeance)<=in30)
+    .sort((a,b)=>new Date(a.date_echeance)-new Date(b.date_echeance));
+  const due30=due.reduce((s,f)=>s+(+f.montant||0),0);
+  const kpi=(lab,val,col)=>`<div class="item"><div class="b"><div class="s">${lab}</div><div class="n" style="font-size:22px;${col?'color:'+col:''}">${val}</div></div></div>`;
+  el('content').innerHTML=`
+    <div class="list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      ${kpi('À sortir sous 30 j',Math.round(due30).toLocaleString('fr-FR')+' €','var(--warn)')}
+      ${kpi('Tâches en retard',late.length,late.length?'var(--crit)':'var(--good)')}
+      ${kpi('P1 ouvertes',p1.length,'var(--warn)')}
+      ${kpi('Contacts',nc,'')}
+    </div>
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">🔥 P1 en cours</h2>
+    <div class="list">${p1.slice(0,6).map(t=>`<div class="item"><div class="av" style="background:#e6676722;color:var(--crit)">!</div><div class="b"><div class="n">${t.titre}</div><div class="s">${t.pilier||''}</div></div></div>`).join('')||'<div class="empty">Rien en P1 🎉</div>'}</div>
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">🧾 Prochaines sorties (30 j)</h2>
+    <div class="list">${due.slice(0,6).map(f=>`<div class="item"><div class="b"><div class="n">${f.libelle}</div><div class="s">${new Date(f.date_echeance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} · ${f.pilier||''}</div></div><div class="tags"><span class="tg" style="background:#e6676722;color:var(--crit)">−${Math.round(f.montant).toLocaleString('fr-FR')} €</span></div></div>`).join('')||'<div class="empty">Aucune échéance à 30 j</div>'}</div>`;
+}
+</script>
+</body>
+</html>
