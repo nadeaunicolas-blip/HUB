@@ -797,9 +797,41 @@ async function renderAgenda(){
   _cal.render();
 }
 
-/* COCKPIT */
+/* COCKPIT / ACCUEIL */
+function go(v){var n=document.querySelector('.nav[data-view="'+v+'"]');if(n)n.click();}
 async function renderCockpit(){
   el('content').innerHTML='<div class="empty">Chargement…</div>';
+  {
+    let agX=[],tkX=[],fnX=[];
+    try{agX=(await sb('agenda_cache?select=*&order=debut.asc')).filter(e=>new Date(e.debut)>=new Date(Date.now()-43200000));}catch(e){}
+    try{tkX=await sb('taches?select=*');}catch(e){}
+    try{fnX=await sb('finances?select=*');}catch(e){}
+    const today=new Date();today.setHours(0,0,0,0);const in30=new Date(today);in30.setDate(in30.getDate()+30);
+    const open=tkX.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
+    const late=open.filter(t=>t.echeance&&new Date(t.echeance)<today).length;
+    const due30=fnX.filter(f=>f.sens==='sortie'&&f.statut!=='regle'&&f.date_echeance&&new Date(f.date_echeance)<=in30).reduce((s,f)=>s+(+f.montant||0),0);
+    const H='font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);font-weight:700;margin:22px 0 10px';
+    const fam=(titre,mods)=>`<div style="margin-bottom:12px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;margin-bottom:6px">${titre}</div><div style="display:flex;flex-wrap:wrap;gap:8px">${mods.map(m=>`<button class="chip" style="cursor:pointer" onclick="go('${m[0]}')">${m[1]}</button>`).join('')}</div></div>`;
+    const agHtml=agX.slice(0,6).map(e=>`<div class="item"><div class="av">📅</div><div class="b"><div class="n">${e.titre}</div><div class="s">${new Date(e.debut).toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'short'})} · ${new Date(e.debut).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}${e.lieu?' · '+e.lieu:''}</div></div></div>`).join('')||'<div class="empty">Rien à l’agenda</div>';
+    el('content').innerHTML=`
+      <div style="position:relative;border-radius:18px;overflow:hidden;margin-bottom:6px;min-height:190px;display:flex;align-items:flex-end;background:#000">
+        <img src="./hero.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(17,17,16,.12),rgba(17,17,16,.93))"></div>
+        <div style="position:relative;padding:22px 24px">
+          <div style="font-size:27px;font-weight:800">Bonjour Nico 👋</div>
+          <div style="color:var(--mut);font-size:13px;margin-top:5px">${today.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${open.length} tâches ouvertes${late?' · <span style="color:var(--crit)">'+late+' en retard</span>':''} · <span style="color:var(--warn)">${Math.round(due30).toLocaleString('fr-FR')} €</span> à sortir sous 30 j</div>
+        </div>
+      </div>
+      <h2 style="${H}">📅 Agenda — prochains jours</h2>
+      <div class="list">${agHtml}</div>
+      <h2 style="${H}">🗂 Tes univers</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px">
+        <div class="card" style="border-top:3px solid var(--rsvp)"><h3 style="margin:0 0 12px;font-size:16px">🍷 RSVP</h3>${fam('CRM &amp; Ventes',[['contacts','Contacts'],['orgs','Organisations'],['pipeline','Pipeline']])}${fam('Opérations',[['projets','Projets'],['taches','Tâches']])}${fam('Finances',[['finances','Finances'],['treso','Trésorerie']])}${fam('Marketing',[['contenu','Contenu'],['pilotage','Pilotage']])}</div>
+        <div class="card" style="border-top:3px solid var(--immobilier)"><h3 style="margin:0 0 12px;font-size:16px">🏡 Perso</h3>${fam('Patrimoine',[['immobilier','Immobilier']])}</div>
+        <div class="card" style="border-top:3px solid var(--nws)"><h3 style="margin:0 0 12px;font-size:16px">🍇 NWS</h3><div class="muted" style="font-size:13px">À venir — import &amp; négoce de vins.</div></div>
+      </div>`;
+    return;
+  }
   let ts=[],fs=[],nc=0;
   try{ts=await sb('taches?select=*');}catch(e){}
   try{fs=await sb('finances?select=*');}catch(e){}
