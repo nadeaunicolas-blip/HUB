@@ -1,3 +1,269 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pilotage RSVP</title>
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111110;color:#c3c2b7;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:24px}.b{max-width:440px}h2{color:#fff;margin:0 0 10px}p{line-height:1.5}b{color:#fff}</style></head>
-<body><div class="b"><h2>Pilotage RSVP</h2><p>Ce module accueillera ton artifact <b>Pilotage RSVP</b>.<br><br>Ouvre-le une fois dans ton panneau <b>Artifacts</b> de Claude (un simple clic) pour le télécharger depuis iCloud, puis dis-moi « ok » — je l'intègre ici automatiquement.</p></div></body></html>
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Pilotage Rsvp",
+  "schemaVersion": 1,
+  "description": "Tableau de bord de pilotage business RSVP : CA mensuel 2026 vs 2025 (graphe), KPIs quotidiens (CA par canal, leads B2B, cadeaux, couverts midi) et hebdo (CA/canal, panier moyen, marge, prospection, CRM, trésorerie/dette, process) en cases saisissables mémorisées, + résumé fiscal. Au 07/07/2026."
+}
+</script>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pilotage RSVP</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root{color-scheme:light;--dark:#1F4E79;--blue:#2E75B6;--light:#DDEBF7;--grey:#6b7280;--green:#548235;
+ --zgreen:#E2EFDA;--zyellow:#FFF2CC;--zred:#FCE4E4;--orange:#C65911;--border:#e5e9ee;--bg:#F4F6F9;--card:#fff;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:#1f2937;line-height:1.45;padding:22px 18px 60px}
+.wrap{max-width:1000px;margin:0 auto}
+header{background:linear-gradient(135deg,var(--dark),var(--blue));color:#fff;border-radius:14px;padding:22px 26px;box-shadow:0 6px 18px rgba(31,78,121,.22)}
+header h1{font-size:22px;font-weight:700}
+header .sub{font-size:12.5px;opacity:.92;margin-top:5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 16px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.kpi .lab{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.4px}
+.kpi .val{font-size:21px;font-weight:700;margin-top:4px}
+.kpi.red .val{color:#b91c1c}.kpi.green .val{color:var(--green)}.kpi.blue .val{color:var(--blue)}.kpi.orange .val{color:var(--orange)}
+.kpi .sub2{font-size:11px;color:var(--grey);margin-top:2px}
+section{margin-top:24px}
+h2{font-size:14px;color:#fff;background:var(--dark);padding:9px 15px;border-radius:8px 8px 0 0;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+h2 .tag{font-size:10px;background:rgba(255,255,255,.22);padding:2px 8px;border-radius:20px;font-weight:600}
+h2.green{background:var(--green)}h2.orange{background:var(--orange)}
+.panel{background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;box-shadow:0 2px 8px rgba(0,0,0,.04);padding:16px 18px}
+.chartbox{position:relative;height:300px}
+.chartbox.sm{height:250px}
+.note{font-size:11.5px;color:var(--grey);font-style:italic;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:var(--light);color:var(--dark);text-align:left;padding:7px 12px;font-weight:600;font-size:11px}
+td{padding:7px 12px;border-top:1px solid #eef1f4}
+td.r,th.r{text-align:right}
+tr:hover td{background:#f9fbfd}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.two{grid-template-columns:1fr}}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fcfdfe}
+.stat .l{font-size:11px;color:var(--grey)}
+.stat .v{font-size:19px;font-weight:700;color:var(--dark);margin-top:3px}
+.stat .d{font-size:11px;color:var(--grey);margin-top:2px}
+.tips{list-style:none;padding:4px 0}
+.tips li{padding:8px 12px;border-left:3px solid var(--blue);background:#f7fafd;margin:7px 0;border-radius:0 8px 8px 0;font-size:12.5px}
+.tips li b{color:var(--dark)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.c{border:1px solid var(--border);border-radius:10px;padding:12px 13px;background:#fcfdfe}
+.c .t{font-size:12px;font-weight:600;color:var(--dark)}
+.c .h{font-size:10.5px;color:var(--grey);margin-bottom:7px}
+.rw{display:flex;align-items:center;gap:6px;margin:5px 0;font-size:12.5px}
+.rw label{flex:1;color:#374151}
+.rw input{width:88px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;text-align:right;font-family:inherit}
+.rw input:focus{outline:none;border-color:var(--blue);background:#fff}
+.tot{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);font-weight:700;color:var(--dark);display:flex;justify-content:space-between;font-size:12.5px}
+.fisc{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+.fisc .b{background:var(--zred);border:1px solid #f3c9c9;border-radius:8px;padding:8px 12px}
+.fisc .b.y{background:var(--zyellow);border-color:#ecdca6}
+.fisc .b b{display:block;font-size:15px}
+footer{margin-top:30px;text-align:center;font-size:11px;color:var(--grey)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>🧭 Pilotage RSVP — La Vinothèque</h1>
+  <div class="sub">CA, statistiques, best-sellers, KPIs & trésorerie — données caisse consolidées 2024-2026 · au 08/07/2026</div>
+  <div class="kpis">
+    <div class="kpi blue"><div class="lab">CA caisse 2026 (→07/07)</div><div class="val">120 381 €</div><div class="sub2">2025 mêmes sem. : 152 151 € (−21 %)</div></div>
+    <div class="kpi green"><div class="lab">Ticket moyen 2026</div><div class="val">42,55 €</div><div class="sub2">médian 30 € · 2 829 tickets</div></div>
+    <div class="kpi orange"><div class="lab">CA hebdo moyen 2026</div><div class="val">4 459 €</div><div class="sub2">médiane 4 560 € · 2025 : 4 985</div></div>
+    <div class="kpi red"><div class="lab">Trésorerie (06/07)</div><div class="val">−12 197 €</div><div class="sub2">découvert (fido)</div></div>
+  </div>
+</header>
+
+<!-- 1 CA HEBDO -->
+<section>
+  <h2>📊 CA caisse hebdomadaire — 2026 vs 2025</h2>
+  <div class="panel">
+    <div class="chartbox"><canvas id="caChart"></canvas></div>
+    <div class="note">CA par semaine ISO (scontrini). Superb jusqu'au 13/04/2025 puis iSiCASH. S28 2026 partielle (au 07/07).</div>
+  </div>
+</section>
+
+<!-- 2 STATS -->
+<section>
+  <h2>📐 Statistiques</h2>
+  <div class="panel">
+    <div class="statgrid">
+      <div class="stat"><div class="l">Ticket moyen</div><div class="v">42,55 €</div><div class="d">2025 : 44,62 € (−4,6 %)</div></div>
+      <div class="stat"><div class="l">Ticket médian</div><div class="v">30,00 €</div><div class="d">2025 : 30,50 € — stable</div></div>
+      <div class="stat"><div class="l">CA hebdo moyen 2026</div><div class="v">4 459 €</div><div class="d">2025 : 4 985 € (−10,6 %)</div></div>
+      <div class="stat"><div class="l">CA hebdo médian 2026</div><div class="v">4 560 €</div><div class="d">2025 : 4 898 €</div></div>
+      <div class="stat"><div class="l">Meilleure semaine 2026</div><div class="v">6 628 €</div><div class="d">S15 (avril) · 2025 max 10 704 €</div></div>
+      <div class="stat"><div class="l">Nb tickets 2026</div><div class="v">2 829</div><div class="d">2025 (avr-déc) : 3 635</div></div>
+    </div>
+    <div class="note">Lecture : le <b>panier médian (30 €) est stable</b> ; la moyenne (43 €) est tirée par de gros paniers B2B. Le recul 2026 vient du <b>trafic</b> (moins de semaines fortes), pas du panier.</div>
+  </div>
+</section>
+
+<!-- 3 BEST SELLERS -->
+<section>
+  <h2>🏆 Best-sellers <span class="tag">2025-2026</span></h2>
+  <div class="panel two">
+    <div>
+      <table>
+        <thead><tr><th>Top CA</th><th class="r">CA</th><th class="r">Qté</th></tr></thead>
+        <tbody>
+          <tr><td>Follet Terroirs 2019 (magnum)</td><td class="r">22 425 €</td><td class="r">195</td></tr>
+          <tr><td>Consegna Singola / Mailbox</td><td class="r">4 512 €</td><td class="r">188</td></tr>
+          <tr><td>Evento CARSUP</td><td class="r">4 356 €</td><td class="r">1</td></tr>
+          <tr><td>Grandpierre Réserve</td><td class="r">4 300 €</td><td class="r">100</td></tr>
+          <tr><td>Évent. Trophée Français</td><td class="r">2 484 €</td><td class="r">1</td></tr>
+          <tr><td>Masterclass Guillin</td><td class="r">1 979 €</td><td class="r">1</td></tr>
+          <tr><td>Follet Brut Nature</td><td class="r">1 947 €</td><td class="r">33</td></tr>
+          <tr><td>Follet Terroirs (btl)</td><td class="r">1 815 €</td><td class="r">33</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>Top volume</th><th class="r">Qté</th><th class="r">CA</th></tr></thead>
+        <tbody>
+          <tr><td>Follet Terroirs (magnum)</td><td class="r">195</td><td class="r">22 425 €</td></tr>
+          <tr><td>Scatola Magnum (emballage)</td><td class="r">195</td><td class="r">1 268 €</td></tr>
+          <tr><td>Consegna Singola / Mailbox</td><td class="r">188</td><td class="r">4 512 €</td></tr>
+          <tr><td>Grandpierre Réserve</td><td class="r">100</td><td class="r">4 300 €</td></tr>
+          <tr><td>Scatola Natalizia</td><td class="r">100</td><td class="r">500 €</td></tr>
+          <tr><td>Follet Brut Nature</td><td class="r">33</td><td class="r">1 947 €</td></tr>
+          <tr><td>Follet Terroirs (btl)</td><td class="r">33</td><td class="r">1 815 €</td></tr>
+          <tr><td>Pack Gourmand Classique</td><td class="r">22</td><td class="r">1 034 €</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel" style="border-top:1px solid var(--border);border-radius:0 0 10px 10px;margin-top:-1px">
+    <div class="note" style="font-style:normal">⚠️ <b>Follet Terroirs magnum = 22 425 € à lui seul</b> (195 u, essentiellement Volvo/Noël) → forte dépendance à une cuvée + un client. Les « events » (Carsup, Guillin, Trophée) pèsent lourd mais sont ponctuels.</div>
+  </div>
+</section>
+
+<!-- 4 MIX -->
+<section>
+  <h2>🧩 Répartition</h2>
+  <div class="panel two">
+    <div><div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:6px">Catégories (produits catalogués)</div><div class="chartbox sm"><canvas id="catChart"></canvas></div></div>
+    <div><div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:6px">Modes de paiement 2025-2026</div><div class="chartbox sm"><canvas id="payChart"></canvas></div></div>
+  </div>
+  <div class="note">Paiement <b>électronique 74 %</b> du CA (commissions NEXI à surveiller) · bonifico 20 % · espèces 8 %. Côté catégories, l'<b>asporto</b> ressort en tête (canal à développer : lunch/à emporter).</div>
+</section>
+
+<!-- EVENTS -->
+<section>
+  <h2>🎉 Événements — impact sur le CA</h2>
+  <div class="panel two">
+    <div>
+      <table>
+        <thead><tr><th>Année</th><th class="r">Jours</th><th class="r">CA events</th><th class="r">% an</th><th class="r">Uplift</th></tr></thead>
+        <tbody>
+          <tr><td>2024</td><td class="r">16</td><td class="r">22 884 €</td><td class="r">12,5 %</td><td class="r">×1,83</td></tr>
+          <tr><td>2025</td><td class="r">24</td><td class="r">24 773 €</td><td class="r">10,1 %</td><td class="r">×1,45</td></tr>
+          <tr><td>2026*</td><td class="r">13</td><td class="r">16 604 €</td><td class="r">13,8 %</td><td class="r">×2,03</td></tr>
+        </tbody>
+      </table>
+      <div class="note">Uplift = CA moyen d'un jour d'événement vs un jour normal. *2026 au 07/07.</div>
+    </div>
+    <div><div style="font-size:12px;font-weight:600;color:var(--dark);margin-bottom:6px">Part du CA mensuel faite les jours d'event (2026)</div><div class="chartbox sm"><canvas id="evChart"></canvas></div></div>
+  </div>
+  <div class="panel" style="border-top:1px solid var(--border);border-radius:0 0 10px 10px;margin-top:-1px">
+    <div class="note" style="font-style:normal">Top events : <b>Oyster Party</b> (3 428 € le 10/04/26), Vini e formaggi (2 555 €), Deg. Follet (2 200 €)… Un jour d'event = <b>1,5 à 2× un jour normal</b>, pour ~10-14 % du CA annuel sur seulement ~15-25 jours/an. <b>L'Oyster Party est le format le plus rentable → à multiplier.</b></div>
+  </div>
+</section>
+
+<!-- 5 TUYAUX -->
+<section>
+  <h2 class="green">💡 Tuyaux</h2>
+  <div class="panel">
+    <ul class="tips">
+      <li><b>Trafic, pas panier.</b> Panier médian stable à 30 € mais CA hebdo −11 % : le levier est le <b>nombre de tickets</b> (élargir horaires / offre midi).</li>
+      <li><b>Dépendance Follet/Volvo.</b> Une cuvée = 22 k€. Diversifier les cuvées signature et les gros comptes B2B.</li>
+      <li><b>Asporto sous-exploité au comptoir</b> mais 1ère catégorie cataloguée → structurer une vraie offre à emporter.</li>
+      <li><b>Commissions carte.</b> 74 % du CA en électronique → renégocier/optimiser les frais NEXI.</li>
+      <li><b>Semaines fortes = animation.</b> Les pics (S15, events) confirment que l'activité répond dès qu'il y a un événement.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6 KPI QUOTIDIENS -->
+<section>
+  <h2>🗓️ Suivi <span class="tag">QUOTIDIEN</span></h2>
+  <div class="panel">
+    <div class="grid">
+      <div class="c"><div class="t">CA du jour par canal</div><div class="h">saisir chaque soir</div>
+        <div class="rw"><label>Sur place</label><input type="number" data-k="d_ca_sp" placeholder="0"></div>
+        <div class="rw"><label>Asporto</label><input type="number" data-k="d_ca_as" placeholder="0"></div>
+        <div class="rw"><label>B2B</label><input type="number" data-k="d_ca_b2b" placeholder="0"></div>
+        <div class="tot"><span>Total</span><span id="d_ca_tot">0 €</span></div></div>
+      <div class="c"><div class="t">Leads B2B (CRM)</div><div class="h">Brevo</div><div class="rw"><label>Nouveaux</label><input type="number" data-k="d_leads" placeholder="0"></div></div>
+      <div class="c"><div class="t">Cadeaux vendus</div><div class="h">coffrets & cartes</div><div class="rw"><label>Coffrets</label><input type="number" data-k="d_coffrets" placeholder="0"></div><div class="rw"><label>Cartes</label><input type="number" data-k="d_cartes" placeholder="0"></div></div>
+      <div class="c"><div class="t">Couverts midi (test)</div><div class="h">12h-15h</div><div class="rw"><label>Couverts</label><input type="number" data-k="d_midi" placeholder="0"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 KPI HEBDO -->
+<section>
+  <h2>📆 Suivi <span class="tag">HEBDO</span></h2>
+  <div class="panel">
+    <div class="grid">
+      <div class="c"><div class="t">Prospection B2B</div><div class="h">entreprises</div><div class="rw"><label>Contactées</label><input type="number" data-k="w_ent" placeholder="0"></div><div class="rw"><label>Réponses</label><input type="number" data-k="w_rep" placeholder="0"></div><div class="tot"><span>Taux</span><span id="w_taux">—</span></div></div>
+      <div class="c"><div class="t">CRM Brevo</div><div class="h">contacts saisis</div><div class="rw"><label>Contacts</label><input type="number" data-k="w_crm" placeholder="0"></div></div>
+      <div class="c"><div class="t">Trésorerie & dette</div><div class="h">fin de semaine</div><div class="rw"><label>Tréso</label><input type="number" data-k="w_treso" placeholder="-12197"></div><div class="rw"><label>Dette nette</label><input type="number" data-k="w_dette" placeholder="0"></div></div>
+      <div class="c"><div class="t">Process</div><div class="h">fiches validées</div><div class="rw"><label>Fiches</label><input type="number" data-k="w_proc" placeholder="0"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 FISCAL -->
+<section>
+  <h2 class="orange">⚖️ Rappel fiscal</h2>
+  <div class="panel"><div class="fisc">
+    <div class="b"><span>À gérer (ADE + Comune)</span><b>24 943 €</b></div>
+    <div class="b y"><span>Contestable IVA doppia</span><b>≈ 11 850 €</b></div>
+    <div class="b"><span>Fournisseurs vins à régler</span><b>Follet 1 355 €</b></div>
+    <div style="font-size:11.5px;color:var(--grey)">Détail → artefact « Situation fiscale RSVP ».</div>
+  </div></div>
+</section>
+
+<footer>RSVP — pilotage · au 08/07/2026 · caisse Superb+iSiCASH, banque, Brevo, fiscal · cases KPI sauvegardées dans ce navigateur</footer>
+</div>
+
+<script>
+// bar hebdo
+new Chart(document.getElementById('caChart'),{type:'bar',
+ data:{labels:['S2','S3','S4','S5','S6','S7','S8','S9','S10','S11','S12','S13','S14','S15','S16','S17','S18','S19','S20','S21','S22','S23','S24','S25','S26','S27','S28'],
+  datasets:[{label:'2025',data:[3912,3550,4037,10704,5371,5509,4534,4732,5211,5147,6493,7633,5971,9265,4781,2336,3848,6282,7383,8743,4898,6788,4998,6052,5478,4021,4474],backgroundColor:'#BDD7EE',borderRadius:3},
+   {label:'2026',data:[1711,3528,3580,3527,4529,4560,4573,4570,3560,4511,3797,4825,3763,6628,5905,6270,3200,4774,6068,6007,5759,5981,4503,5391,3506,4615,740],backgroundColor:'#1F4E79',borderRadius:3}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y.toLocaleString('fr-FR')+' €';}}}},scales:{y:{ticks:{callback:function(v){return (v/1000)+'k';}}}}}});
+// doughnut catégories
+new Chart(document.getElementById('catChart'),{type:'doughnut',
+ data:{labels:['Asporto','Vins au verre','Vini asporto','Champagne','Terroir en Table','Vini rossi','Bevande','Vini bianchi'],
+  datasets:[{data:[40711,11217,9815,5407,4818,4121,4016,3266],backgroundColor:['#1F4E79','#2E75B6','#5B9BD5','#9DC3E6','#C65911','#ED7D31','#F4B183','#BDD7EE']}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:10}}}}}});
+// doughnut paiement
+new Chart(document.getElementById('payChart'),{type:'doughnut',
+ data:{labels:['Électronique','Bonifico','Espèces','Satispay'],
+  datasets:[{data:[259965,69516,28934,4898],backgroundColor:['#1F4E79','#548235','#C65911','#ED7D31']}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
+// events part mensuelle 2026
+new Chart(document.getElementById('evChart'),{type:'bar',
+ data:{labels:['Fév','Mars','Avr','Mai','Juin'],datasets:[{label:'% du CA du mois',data:[7.0,8.8,22.3,20.2,18.8],backgroundColor:'#C65911',borderRadius:3}]},
+ options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' % du CA du mois';}}}},scales:{y:{ticks:{callback:function(v){return v+'%';}}}}}});
+// KPI persistants
+var inputs=document.querySelectorAll('input[data-k]');
+inputs.forEach(function(inp){var v=localStorage.getItem('rsvp_'+inp.dataset.k);if(v)inp.value=v;inp.addEventListener('input',function(){localStorage.setItem('rsvp_'+inp.dataset.k,inp.value);recompute();});});
+function val(k){var e=document.querySelector('[data-k="'+k+'"]');return e&&e.value?parseFloat(e.value):0;}
+function recompute(){
+ document.getElementById('d_ca_tot').textContent=Math.round(val('d_ca_sp')+val('d_ca_as')+val('d_ca_b2b')).toLocaleString('fr-FR')+' €';
+ var e=val('w_ent'),r=val('w_rep');document.getElementById('w_taux').textContent=e>0?Math.round(r/e*100)+' %':'—';}
+recompute();
+</script>
+</body>
+</html>
