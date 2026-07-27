@@ -280,7 +280,7 @@ async function boot(){
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda'};
+const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda'};
 const el=id=>document.getElementById(id);
 function render(){
   el('title').textContent=TITLES[view]||'HUB';
@@ -296,6 +296,9 @@ function render(){
   if(view==='contenu')return renderContenu();
   if(view==='pilotage')return renderPilotage();
   if(view==='agenda')return renderAgenda();
+  if(view==='rsvp')return renderRsvp();
+  if(view==='perso')return renderPerso();
+  if(view==='nws')return renderNws();
   if(view==='cockpit')return renderCockpit();
 }
 function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
@@ -798,68 +801,98 @@ async function renderAgenda(){
 }
 
 /* COCKPIT / ACCUEIL */
-function go(v){var n=document.querySelector('.nav[data-view="'+v+'"]');if(n)n.click();}
+function nav(v){
+  document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
+  var n=document.querySelector('.nav[data-view="'+v+'"]'); if(n)n.classList.add('active');
+  view=v; toggleNav(false); render();
+}
+function go(v){nav(v);}
+var fmtE=function(n){return Math.round(n).toLocaleString('fr-FR')+' €';};
+var backBtn='<button class="btn sm" onclick="nav(\'cockpit\')" style="margin-bottom:16px">← Cockpit</button>';
+function famCard(ic,titre,mods){return '<div class="card"><h3 style="margin:0 0 12px;font-size:15px">'+ic+' '+titre+'</h3><div style="display:flex;flex-wrap:wrap;gap:8px">'+mods.map(function(m){return '<button class="chip" style="cursor:pointer" onclick="nav(\''+m[0]+'\')">'+m[1]+'</button>';}).join('')+'</div></div>';}
+
 async function renderCockpit(){
   el('content').innerHTML='<div class="empty">Chargement…</div>';
-  {
-    let agX=[],tkX=[],fnX=[];
-    try{agX=(await sb('agenda_cache?select=*&order=debut.asc')).filter(e=>new Date(e.debut)>=new Date(Date.now()-43200000));}catch(e){}
-    try{tkX=await sb('taches?select=*');}catch(e){}
-    try{fnX=await sb('finances?select=*');}catch(e){}
-    const today=new Date();today.setHours(0,0,0,0);const in30=new Date(today);in30.setDate(in30.getDate()+30);
-    const open=tkX.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
-    const late=open.filter(t=>t.echeance&&new Date(t.echeance)<today).length;
-    const due30=fnX.filter(f=>f.sens==='sortie'&&f.statut!=='regle'&&f.date_echeance&&new Date(f.date_echeance)<=in30).reduce((s,f)=>s+(+f.montant||0),0);
-    const H='font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);font-weight:700;margin:22px 0 10px';
-    const fam=(titre,mods)=>`<div style="margin-bottom:12px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;margin-bottom:6px">${titre}</div><div style="display:flex;flex-wrap:wrap;gap:8px">${mods.map(m=>`<button class="chip" style="cursor:pointer" onclick="go('${m[0]}')">${m[1]}</button>`).join('')}</div></div>`;
-    const agHtml=agX.slice(0,6).map(e=>`<div class="item"><div class="av">📅</div><div class="b"><div class="n">${e.titre}</div><div class="s">${new Date(e.debut).toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'short'})} · ${new Date(e.debut).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}${e.lieu?' · '+e.lieu:''}</div></div></div>`).join('')||'<div class="empty">Rien à l’agenda</div>';
-    el('content').innerHTML=`
-      <div style="position:relative;border-radius:18px;overflow:hidden;margin-bottom:6px;min-height:190px;display:flex;align-items:flex-end;background:#000">
-        <img src="./hero.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5">
-        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(17,17,16,.12),rgba(17,17,16,.93))"></div>
-        <div style="position:relative;padding:22px 24px">
-          <div style="font-size:27px;font-weight:800">Bonjour Nico 👋</div>
-          <div style="color:var(--mut);font-size:13px;margin-top:5px">${today.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${open.length} tâches ouvertes${late?' · <span style="color:var(--crit)">'+late+' en retard</span>':''} · <span style="color:var(--warn)">${Math.round(due30).toLocaleString('fr-FR')} €</span> à sortir sous 30 j</div>
-        </div>
-      </div>
-      <h2 style="${H}">📅 Agenda — prochains jours</h2>
-      <div class="list">${agHtml}</div>
-      <h2 style="${H}">🗂 Tes univers</h2>
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px">
-        <div class="card" style="border-top:3px solid var(--rsvp)"><h3 style="margin:0 0 12px;font-size:16px">🍷 RSVP</h3>${fam('CRM &amp; Ventes',[['contacts','Contacts'],['orgs','Organisations'],['pipeline','Pipeline']])}${fam('Opérations',[['projets','Projets'],['taches','Tâches']])}${fam('Finances',[['finances','Finances'],['treso','Trésorerie']])}${fam('Marketing',[['contenu','Contenu'],['pilotage','Pilotage']])}</div>
-        <div class="card" style="border-top:3px solid var(--immobilier)"><h3 style="margin:0 0 12px;font-size:16px">🏡 Perso</h3>${fam('Patrimoine',[['immobilier','Immobilier']])}</div>
-        <div class="card" style="border-top:3px solid var(--nws)"><h3 style="margin:0 0 12px;font-size:16px">🍇 NWS</h3><div class="muted" style="font-size:13px">À venir — import &amp; négoce de vins.</div></div>
-      </div>`;
-    return;
-  }
-  let ts=[],fs=[],nc=0;
-  try{ts=await sb('taches?select=*');}catch(e){}
-  try{fs=await sb('finances?select=*');}catch(e){}
-  try{nc=(await sb('contacts?select=id&limit=5000')).length;}catch(e){}
-  let ag=[];try{ag=(await sb('agenda_cache?select=*&order=debut.asc')).filter(e=>new Date(e.debut)>=new Date(Date.now()-43200000));}catch(e){}
+  let agX=[],tkX=[],ca={realise:0,objectif:473000,maj:''};
+  try{agX=(await sb('agenda_cache?select=*&order=debut.asc')).filter(function(e){return new Date(e.debut)>=new Date(Date.now()-43200000);});}catch(e){}
+  try{tkX=await sb('taches?select=*');}catch(e){}
+  try{var kr=await sb('kv_store?key=eq.ca_hub&select=value');if(kr&&kr[0]&&kr[0].value)ca=Object.assign(ca,kr[0].value);}catch(e){}
   const today=new Date();today.setHours(0,0,0,0);
-  const in30=new Date(today);in30.setDate(in30.getDate()+30);
-  const open=ts.filter(t=>t.statut==='a_faire'||t.statut==='en_cours');
-  const late=open.filter(t=>t.echeance&&new Date(t.echeance)<today);
-  const p1=open.filter(t=>t.priorite==='p1');
-  const due=fs.filter(f=>f.sens==='sortie'&&f.statut!=='regle'&&f.date_echeance&&new Date(f.date_echeance)<=in30)
-    .sort((a,b)=>new Date(a.date_echeance)-new Date(b.date_echeance));
-  const due30=due.reduce((s,f)=>s+(+f.montant||0),0);
-  const kpi=(lab,val,col)=>`<div class="item"><div class="b"><div class="s">${lab}</div><div class="n" style="font-size:22px;${col?'color:'+col:''}">${val}</div></div></div>`;
-  el('content').innerHTML=`
-    <div class="list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-      ${kpi('À sortir sous 30 j',Math.round(due30).toLocaleString('fr-FR')+' €','var(--warn)')}
-      ${kpi('Tâches en retard',late.length,late.length?'var(--crit)':'var(--good)')}
-      ${kpi('P1 ouvertes',p1.length,'var(--warn)')}
-      ${kpi('Contacts',nc,'')}
-    </div>
-    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">📅 Agenda — prochains jours</h2>
-    <div class="list">${ag.slice(0,8).map(e=>`<div class="item"><div class="av">📅</div><div class="b"><div class="n">${e.titre}</div><div class="s">${new Date(e.debut).toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'short'})} · ${new Date(e.debut).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}${e.lieu?' · '+e.lieu:''}</div></div></div>`).join('')||'<div class="empty">Rien à l’agenda</div>'}</div>
-    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">🔥 P1 en cours</h2>
-    <div class="list">${p1.slice(0,6).map(t=>`<div class="item"><div class="av" style="background:#e6676722;color:var(--crit)">!</div><div class="b"><div class="n">${t.titre}</div><div class="s">${t.pilier||''}</div></div></div>`).join('')||'<div class="empty">Rien en P1 🎉</div>'}</div>
-    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:24px 0 10px">🧾 Prochaines sorties (30 j)</h2>
-    <div class="list">${due.slice(0,6).map(f=>`<div class="item"><div class="b"><div class="n">${f.libelle}</div><div class="s">${new Date(f.date_echeance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} · ${f.pilier||''}</div></div><div class="tags"><span class="tg" style="background:#e6676722;color:var(--crit)">−${Math.round(f.montant).toLocaleString('fr-FR')} €</span></div></div>`).join('')||'<div class="empty">Aucune échéance à 30 j</div>'}</div>`;
+  const open=tkX.filter(function(t){return t.statut==='a_faire'||t.statut==='en_cours';});
+  const late=open.filter(function(t){return t.echeance&&new Date(t.echeance)<today;}).length;
+  const realise=+ca.realise||0, objectif=+ca.objectif||473000;
+  const pct=Math.max(0,Math.min(100, objectif?realise/objectif*100:0));
+  const reste=Math.max(0,objectif-realise);
+  const yEnd=new Date(today.getFullYear(),11,31); const daysLeft=Math.max(1,Math.round((yEnd-today)/86400000));
+  const perMonth=reste/(daysLeft/30.44);
+  const R=54,C=2*Math.PI*R, off=C*(1-pct/100);
+  const agHtml=agX.slice(0,6).map(function(e){return '<div class="item"><div class="av">📅</div><div class="b"><div class="n">'+e.titre+'</div><div class="s">'+new Date(e.debut).toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'short'})+' · '+new Date(e.debut).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+(e.lieu?' · '+e.lieu:'')+'</div></div></div>';}).join('')||'<div class="empty">Rien à l’agenda</div>';
+  function uni(col,ic,titre,sous){return '<div style="cursor:pointer;position:relative;border-radius:16px;padding:22px;background:rgba(26,26,25,.5);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border:1px solid rgba(255,255,255,.14);border-top:3px solid '+col+';transition:transform .12s,background .12s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.background=\'rgba(26,26,25,.72)\'" onmouseout="this.style.transform=\'\';this.style.background=\'rgba(26,26,25,.5)\'"><div style="font-size:32px">'+ic+'</div><div style="font-size:20px;font-weight:800;margin-top:8px">'+titre+'</div><div style="color:var(--mut);font-size:12.5px;margin-top:5px;line-height:1.4">'+sous+'</div><div style="color:'+col+';font-size:12px;font-weight:700;margin-top:14px">Ouvrir →</div></div>';}
+  el('content').innerHTML=
+    '<div style="position:relative;border-radius:20px;overflow:hidden;min-height:calc(100vh - 150px);display:flex;flex-direction:column;justify-content:space-between;background:#000">'+
+      '<img src="./hero.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62">'+
+      '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(17,17,16,.12),rgba(17,17,16,.34) 52%,rgba(17,17,16,.9))"></div>'+
+      '<div style="position:relative;padding:32px 32px 0">'+
+        '<div style="font-size:31px;font-weight:800">Bonjour Nico 👋</div>'+
+        '<div style="color:var(--mut);font-size:13px;margin-top:6px">'+today.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' · '+open.length+' tâches ouvertes'+(late?' · <span style="color:var(--crit)">'+late+' en retard</span>':'')+'</div>'+
+      '</div>'+
+      '<div style="position:relative;padding:24px 24px 32px" onclick="event.stopPropagation()">'+
+        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#e7e6dd;font-weight:700;margin:0 6px 14px">Tes univers</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">'+
+          '<a onclick="nav(\'rsvp\')">'+uni('var(--rsvp)','🍷','RSVP','CRM & Ventes · Opérations · Finances · Marketing')+'</a>'+
+          '<a onclick="nav(\'perso\')">'+uni('var(--immobilier)','🏡','Perso','Immobilier & patrimoine')+'</a>'+
+          '<a onclick="nav(\'nws\')">'+uni('var(--nws)','🍇','NWS','Import & négoce — à venir')+'</a>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:20px">'+
+      '<div style="flex:2 1 320px">'+
+        '<h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);font-weight:700;margin:0 0 10px">📅 Agenda — prochains jours</h2>'+
+        '<div class="list">'+agHtml+'</div>'+
+      '</div>'+
+      '<div style="flex:1 1 260px">'+
+        '<h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);font-weight:700;margin:0 0 10px">🎯 Objectif CA 2026</h2>'+
+        '<div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;text-align:center">'+
+          '<svg viewBox="0 0 140 140" style="width:168px;height:168px">'+
+            '<circle cx="70" cy="70" r="'+R+'" fill="none" stroke="var(--surface2)" stroke-width="13"></circle>'+
+            '<circle cx="70" cy="70" r="'+R+'" fill="none" stroke="var(--good)" stroke-width="13" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 70 70)"></circle>'+
+            '<text x="70" y="66" text-anchor="middle" fill="#fff" style="font-size:27px;font-weight:800">'+pct.toFixed(0)+'%</text>'+
+            '<text x="70" y="87" text-anchor="middle" fill="#8a897f" style="font-size:11px">de l’objectif</text>'+
+          '</svg>'+
+          '<div style="font-size:23px;font-weight:800;margin-top:8px">'+fmtE(realise)+'</div>'+
+          '<div style="color:var(--mut);font-size:12px">réalisé sur '+fmtE(objectif)+' TTC</div>'+
+          '<div style="display:flex;gap:8px;margin-top:16px">'+
+            '<div style="flex:1;background:var(--surface2);border-radius:10px;padding:10px"><div style="color:var(--mut2);font-size:10px;text-transform:uppercase;letter-spacing:.04em">Reste</div><div style="font-weight:700;color:var(--warn);font-size:14px">'+fmtE(reste)+'</div></div>'+
+            '<div style="flex:1;background:var(--surface2);border-radius:10px;padding:10px"><div style="color:var(--mut2);font-size:10px;text-transform:uppercase;letter-spacing:.04em">Rythme requis</div><div style="font-weight:700;font-size:14px">'+fmtE(perMonth)+'<span style="color:var(--mut2);font-size:11px">/mois</span></div></div>'+
+          '</div>'+
+          '<div style="color:var(--mut2);font-size:10.5px;margin-top:12px">'+daysLeft+' j restants en 2026'+(ca.maj?' · maj '+ca.maj:'')+'</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
 }
+
+async function renderRsvp(){
+  el('content').innerHTML=backBtn+
+    '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">'+
+      famCard('🤝','CRM & Ventes',[['contacts','Contacts'],['orgs','Organisations'],['pipeline','Pipeline']])+
+      famCard('⚙️','Opérations',[['projets','Projets'],['taches','Tâches']])+
+      famCard('💶','Finances',[['finances','Finances'],['treso','Trésorerie']])+
+      famCard('📣','Marketing',[['contenu','Contenu'],['pilotage','Pilotage']])+
+    '</div>';
+}
+
+async function renderPerso(){
+  el('content').innerHTML=backBtn+
+    '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">'+
+      famCard('🏠','Patrimoine',[['immobilier','Immobilier']])+
+    '</div>';
+}
+
+async function renderNws(){
+  el('content').innerHTML=backBtn+
+    '<div class="empty" style="padding:50px 20px">🍇 <b>NWS</b> — Import & négoce de vins.<br>À venir : catalogue, marges, commandes.</div>';
+}
+
 </script>
 </body>
 </html>
