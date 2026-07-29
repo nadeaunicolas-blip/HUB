@@ -322,7 +322,7 @@ function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
 async function renderContacts(){
   el('content').innerHTML='<div class="empty">Chargement…</div>';
   try{ cacheContacts=await sbAll('contacts?select=*&order=nom'); }catch(e){ el('content').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
-  const cats=[...new Set(cacheContacts.map(c=>c.source).filter(Boolean))].sort();
+  const cats=[...new Set(cacheContacts.flatMap(c=>c.listes||[]))].sort();
   el('content').innerHTML=`
     <div class="toolbar"><input type="search" id="q" placeholder="Rechercher un contact…" value="${search}"></div>
     <div class="toolbar" id="frole"></div>
@@ -335,8 +335,8 @@ async function renderContacts(){
   el('frole').querySelectorAll('[data-r]').forEach(c=>c.onclick=()=>{filterRole=c.dataset.r||null;renderContacts();});
   el('frole').querySelectorAll('[data-p]').forEach(c=>c.onclick=()=>{filterPil=c.dataset.p||null;renderContacts();});
   if(cats.length){
-    el('fcat').innerHTML='<span class="chip '+(!filterSrc?'on':'')+'" data-c="">Toutes catégories</span>'+
-      cats.map(s=>`<span class="chip ${filterSrc===s?'on':''}" data-c="${s}">${srcLabel(s)}</span>`).join('');
+    el('fcat').innerHTML='<span class="chip '+(!filterSrc?'on':'')+'" data-c="">Toutes listes</span>'+
+      cats.map(s=>`<span class="chip ${filterSrc===s?'on':''}" data-c="${s}">${s}</span>`).join('');
     el('fcat').querySelectorAll('[data-c]').forEach(c=>c.onclick=()=>{filterSrc=c.dataset.c||null;renderContacts();});
   }
   el('q').oninput=e=>{search=e.target.value;drawContacts();};
@@ -346,7 +346,7 @@ function drawContacts(){
   let rows=cacheContacts.slice();
   if(filterRole)rows=rows.filter(c=>(c.roles||[]).includes(filterRole));
   if(filterPil)rows=rows.filter(c=>(c.piliers||[]).includes(filterPil));
-  if(filterSrc)rows=rows.filter(c=>c.source===filterSrc);
+  if(filterSrc)rows=rows.filter(c=>(c.listes||[]).includes(filterSrc));
   if(search){const s=search.toLowerCase();rows=rows.filter(c=>((c.prenom||'')+' '+(c.nom||'')+' '+(c.email||'')+' '+(c.telephone||'')).toLowerCase().includes(s));}
   const orgName=id=>{const o=cacheOrgs.find(o=>o.id===id);return o?o.nom:'';};
   if(!rows.length){el('clist').innerHTML='<div class="empty">Aucun contact.</div>';return;}
@@ -360,7 +360,7 @@ function drawContacts(){
         <div class="s">${[orgName(c.organisation_id),c.poste,c.email,c.telephone].filter(Boolean).join(' · ')||'—'}</div>
       </div>
       <div class="tags">
-        ${c.source&&srcLabel(c.source)?`<span class="tg" style="background:#3987e522;color:var(--rsvp)">${srcLabel(c.source)}</span>`:''}
+        ${(c.listes||[]).slice(0,2).map(l=>`<span class="tg" style="background:#3987e522;color:var(--rsvp)">${l}</span>`).join('')}
         ${(c.piliers||[]).map(p=>`<span class="tg" style="background:${PIL_COLOR[p]}22;color:${PIL_COLOR[p]}">${p}</span>`).join('')}
         ${(c.roles||[]).map(r=>`<span class="tg" style="background:#8a897f22;color:var(--mut)">${ROLE_LABEL[r]}</span>`).join('')}
       </div>
@@ -473,11 +473,11 @@ async function sendEmail(to,name,contactId){
 /* EMAILING GROUPÉ */
 function emailingRecipients(){
   var role=el('em_role')?el('em_role').value:'';
-  var src=el('em_src')?el('em_src').value:'';
+  var liste=el('em_src')?el('em_src').value:'';
   return cacheContacts.filter(function(c){
     if(!c.email||!c.email.trim())return false;
     if(role&&!(c.roles||[]).includes(role))return false;
-    if(src&&c.source!==src)return false;
+    if(liste&&!(c.listes||[]).includes(liste))return false;
     return true;
   });
 }
@@ -497,7 +497,7 @@ function emUpdateCount(){
   emPreview();
 }
 async function renderEmailing(){
-  var srcs=[...new Set(cacheContacts.map(function(c){return c.source;}).filter(Boolean))].sort();
+  var srcs=[...new Set(cacheContacts.flatMap(function(c){return c.listes||[];}))].sort();
   el('content').innerHTML=
    '<div style="max-width:760px">'+
    '<div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px">'+
@@ -506,7 +506,7 @@ async function renderEmailing(){
    '</div>'+
    '<div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">'+
      '<div class="field"><label>Segment — Rôle</label><select id="em_role"><option value="">Tous rôles</option>'+ROLES.map(function(r){return '<option value="'+r+'">'+ROLE_LABEL[r]+'</option>';}).join('')+'</select></div>'+
-     '<div class="field"><label>Segment — Source</label><select id="em_src"><option value="">Toutes sources</option>'+srcs.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('')+'</select></div>'+
+     '<div class="field"><label>Segment — Liste Brevo</label><select id="em_src"><option value="">Toutes listes</option>'+srcs.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('')+'</select></div>'+
    '</div>'+
    '<div style="background:var(--surface2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px">Destinataires avec email : <b id="em_count">0</b> <span class="muted">· limite Brevo 300/jour</span></div>'+
    '<div class="field"><label>Objet <span class="muted">— variables : {prenom} {nom}</span></label><input id="em_subj" placeholder="Une belle nouvelle de La Vinothèque"></div>'+
