@@ -189,6 +189,19 @@ async function sb(path, opts={}, _retry){
   if(r.status===204) return null;
   const txt=await r.text(); return txt?JSON.parse(txt):null;
 }
+/* charge TOUTES les lignes malgré le plafond 1000 de PostgREST (pagination par offset) */
+async function sbAll(path){
+  var all=[],off=0,step=1000;
+  for(var i=0;i<60;i++){
+    var sep=path.indexOf('?')>=0?'&':'?';
+    var page=await sb(path+sep+'limit='+step+'&offset='+off);
+    if(!page||!page.length)break;
+    all=all.concat(page);
+    if(page.length<step)break;
+    off+=step;
+  }
+  return all;
+}
 
 /* ───── AUTH ───── */
 function saveSession(d,em){
@@ -275,7 +288,7 @@ document.getElementById('addbtn').onclick=()=>{
 /* ───── BOOT ───── */
 async function boot(){
   try{ cacheOrgs=await sb('organisations?select=*&order=nom'); }catch(e){ cacheOrgs=[]; }
-  try{ cacheContacts=await sb('contacts?select=*&order=nom&limit=5000'); }catch(e){ cacheContacts=[]; }
+  try{ cacheContacts=await sbAll('contacts?select=*&order=nom'); }catch(e){ cacheContacts=[]; }
   render();
 }
 
@@ -306,7 +319,7 @@ function initials(c){return ((c.prenom||'')[0]||'')+((c.nom||'')[0]||'')||'?';}
 /* CONTACTS */
 async function renderContacts(){
   el('content').innerHTML='<div class="empty">Chargement…</div>';
-  try{ cacheContacts=await sb('contacts?select=*&order=nom&limit=5000'); }catch(e){ el('content').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
+  try{ cacheContacts=await sbAll('contacts?select=*&order=nom'); }catch(e){ el('content').innerHTML='<div class="empty">Erreur de lecture. As-tu bien appliqué les règles d\'accès (SQL) ?</div>'; return; }
   const cats=[...new Set(cacheContacts.map(c=>c.source).filter(Boolean))].sort();
   el('content').innerHTML=`
     <div class="toolbar"><input type="search" id="q" placeholder="Rechercher un contact…" value="${search}"></div>
