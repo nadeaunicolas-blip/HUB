@@ -128,6 +128,7 @@
       <a class="nav" data-view="immobilier"><span class="ic">🏠</span> Immobilier</a>
       <a class="nav" data-view="contenu"><span class="ic">🎬</span> Contenu</a>
       <a class="nav" data-view="pilotage"><span class="ic">📊</span> Pilotage</a>
+      <a class="nav" data-view="emailing"><span class="ic">📣</span> Emailing</a>
       <div class="spacer"></div>
       <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
     </aside>
@@ -293,7 +294,7 @@ async function boot(){
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda'};
+const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda',emailing:'Emailing groupé'};
 const el=id=>document.getElementById(id);
 function render(){
   el('title').textContent=TITLES[view]||'HUB';
@@ -308,6 +309,7 @@ function render(){
   if(view==='immobilier')return renderImmobilier();
   if(view==='contenu')return renderContenu();
   if(view==='pilotage')return renderPilotage();
+  if(view==='emailing')return renderEmailing();
   if(view==='agenda')return renderAgenda();
   if(view==='rsvp')return renderRsvp();
   if(view==='perso')return renderPerso();
@@ -439,24 +441,111 @@ async function delContact(id){
 /* EMAIL (via fonction sécurisée + Brevo) */
 function openEmail(to,name,contactId){
   openModal(`<h3>✉️ Email à ${name||to}</h3>
-    <p class="muted" style="font-size:12px;margin:-6px 0 14px">Depuis nicolas@rsvp-club.com · enregistré dans l'historique du contact</p>
+    <p class="muted" style="font-size:12px;margin:-6px 0 14px">Depuis nicolas@rsvp-club.com · signature ajoutée automatiquement · enregistré dans l'historique</p>
     <div class="field"><label>Objet</label><input id="e_subj"></div>
     <div class="field"><label>Message</label><textarea id="e_body" style="min-height:150px"></textarea></div>
+    <div class="field"><label>📎 Pièce jointe (PDF, image… max ~9 Mo)</label><input type="file" id="e_file" style="font-size:13px"></div>
     <div class="actions"><button class="btn sec sm" onclick="closeModal()">Annuler</button><button class="btn sm" id="e_send">Envoyer</button></div>
     <div class="err" id="e_err"></div>`);
   el('e_send').onclick=()=>sendEmail(to,name,contactId);
 }
+function fileToB64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(f);});}
 async function sendEmail(to,name,contactId){
   const subject=el('e_subj').value.trim(), text=el('e_body').value.trim();
   if(!subject||!text){el('e_err').textContent='Objet et message requis.';return;}
   el('e_send').textContent='Envoi…';el('e_send').disabled=true;
   try{
-    const r=await fetch(SUPA_URL+'/functions/v1/send-email',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({to,toName:name,subject,text})});
+    let attachment=null;const fi=el('e_file');
+    if(fi&&fi.files&&fi.files[0]){
+      const f=fi.files[0];
+      if(f.size>9*1024*1024)throw new Error('Fichier trop lourd (max ~9 Mo).');
+      attachment=[{content:await fileToB64(f),name:f.name}];
+    }
+    const body={to,toName:name,subject,text};if(attachment)body.attachment=attachment;
+    const r=await fetch(SUPA_URL+'/functions/v1/send-email',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||d.error)throw new Error(d.error||('HTTP '+r.status));
-    if(contactId){try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subject,contenu:text,contact_id:contactId,source:'hub'})});}catch(e){}}
+    if(contactId){try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subject,contenu:text+(attachment?'\n[PJ: '+attachment[0].name+']':''),contact_id:contactId,source:'hub'})});}catch(e){}}
     el('modal').innerHTML='<h3>✅ Email envoyé</h3><p class="muted">À '+(name||to)+' — enregistré dans l’historique du contact.</p><div class="actions"><button class="btn sm" onclick="closeModal()">Fermer</button></div>';
   }catch(e){el('e_err').textContent='Erreur : '+e.message;el('e_send').textContent='Réessayer';el('e_send').disabled=false;}
+}
+
+/* EMAILING GROUPÉ */
+function emailingRecipients(){
+  var role=el('em_role')?el('em_role').value:'';
+  var src=el('em_src')?el('em_src').value:'';
+  return cacheContacts.filter(function(c){
+    if(!c.email||!c.email.trim())return false;
+    if(role&&!(c.roles||[]).includes(role))return false;
+    if(src&&c.source!==src)return false;
+    return true;
+  });
+}
+function emPreview(){
+  var r=emailingRecipients()[0];
+  if(!r){el('em_prev').innerHTML='<span class="muted">Aucun destinataire avec email dans ce segment.</span>';return;}
+  var fill=function(s){return (s||'').replace(/{prenom}/g,r.prenom||'').replace(/{nom}/g,r.nom||'');};
+  el('em_prev').innerHTML='<div style="font-size:12px;color:var(--mut2)">Aperçu pour '+((r.prenom||'')+' '+(r.nom||'')).trim()+' &lt;'+r.email+'&gt;</div>'+
+    '<div style="margin-top:8px;font-weight:700">'+(fill(el('em_subj').value)||'<span class="muted">(objet)</span>')+'</div>'+
+    '<div style="margin-top:6px;white-space:pre-wrap;color:var(--mut)">'+(fill(el('em_body').value)||'<span class="muted">(message)</span>')+'</div>'+
+    '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:11px;color:var(--mut2)">+ signature RSVP automatique</div>';
+}
+function emUpdateCount(){
+  var n=emailingRecipients().length;
+  el('em_count').textContent=n;
+  var b=el('em_sendbtn');b.textContent='Envoyer à '+n+' contact'+(n>1?'s':'');b.disabled=(n===0);
+  emPreview();
+}
+async function renderEmailing(){
+  var srcs=[...new Set(cacheContacts.map(function(c){return c.source;}).filter(Boolean))].sort();
+  el('content').innerHTML=
+   '<div style="max-width:760px">'+
+   '<div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px">'+
+     '<div style="font-weight:800;margin-bottom:4px">📣 Envoi groupé personnalisé</div>'+
+     '<div class="muted" style="font-size:12.5px">Tu écris une fois, le HUB envoie à chaque contact du segment avec son prénom. Signature ajoutée automatiquement, chaque envoi archivé dans la fiche.</div>'+
+   '</div>'+
+   '<div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">'+
+     '<div class="field"><label>Segment — Rôle</label><select id="em_role"><option value="">Tous rôles</option>'+ROLES.map(function(r){return '<option value="'+r+'">'+ROLE_LABEL[r]+'</option>';}).join('')+'</select></div>'+
+     '<div class="field"><label>Segment — Source</label><select id="em_src"><option value="">Toutes sources</option>'+srcs.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('')+'</select></div>'+
+   '</div>'+
+   '<div style="background:var(--surface2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px">Destinataires avec email : <b id="em_count">0</b> <span class="muted">· limite Brevo 300/jour</span></div>'+
+   '<div class="field"><label>Objet <span class="muted">— variables : {prenom} {nom}</span></label><input id="em_subj" placeholder="Une belle nouvelle de La Vinothèque"></div>'+
+   '<div class="field"><label>Message</label><textarea id="em_body" style="min-height:170px" placeholder="Bonjour {prenom},&#10;&#10;..."></textarea></div>'+
+   '<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin:6px 0 16px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;margin-bottom:8px">Aperçu</div><div id="em_prev"></div></div>'+
+   '<button class="btn" id="em_sendbtn" style="max-width:340px" disabled>Envoyer</button>'+
+   '<div id="em_progress" style="margin-top:14px"></div>'+
+   '</div>';
+  ['em_role','em_src'].forEach(function(id){el(id).onchange=emUpdateCount;});
+  ['em_subj','em_body'].forEach(function(id){el(id).oninput=emPreview;});
+  el('em_sendbtn').onclick=emSend;
+  emUpdateCount();
+}
+async function emSend(){
+  var recips=emailingRecipients();
+  var subject=el('em_subj').value.trim(), body=el('em_body').value.trim();
+  if(!subject||!body){el('em_progress').innerHTML='<span style="color:var(--crit)">Objet et message requis.</span>';return;}
+  if(!confirm('Envoyer à '+recips.length+' contact(s) ? Ce sont de vrais emails.'))return;
+  el('em_sendbtn').disabled=true;el('em_role').disabled=el('em_src').disabled=true;
+  var N=recips.length,ok=0,fail=0;
+  el('em_progress').innerHTML='<div style="background:var(--surface2);border-radius:8px;height:10px;overflow:hidden;margin-bottom:8px"><div id="em_barfill" style="height:100%;width:0;background:var(--good);transition:width .2s"></div></div><div id="em_barlbl" class="muted" style="font-size:13px"></div>';
+  for(var i=0;i<N;i++){
+    var c=recips[i];
+    var subj=subject.replace(/{prenom}/g,c.prenom||'').replace(/{nom}/g,c.nom||'');
+    var text=body.replace(/{prenom}/g,c.prenom||'').replace(/{nom}/g,c.nom||'');
+    try{
+      var r=await fetch(SUPA_URL+'/functions/v1/send-email',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({to:c.email,toName:((c.prenom||'')+' '+(c.nom||'')).trim(),subject:subj,text:text})});
+      var d=await r.json().catch(function(){return {};});
+      if(!r.ok||d.error)throw new Error(d.error||('HTTP '+r.status));
+      ok++;
+      try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subj,contenu:text,contact_id:c.id,source:'hub-groupe'})});}catch(e){}
+    }catch(e){fail++;}
+    var pct=Math.round((i+1)/N*100);
+    if(el('em_barfill'))el('em_barfill').style.width=pct+'%';
+    if(el('em_barlbl'))el('em_barlbl').textContent=(i+1)+' / '+N+' · '+ok+' envoyés'+(fail?' · '+fail+' échecs':'');
+    await new Promise(function(res){setTimeout(res,350);});
+  }
+  el('em_progress').innerHTML='<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px"><div style="font-weight:700">✅ Terminé</div><div class="muted" style="font-size:13px;margin-top:4px">'+ok+' email(s) envoyé(s)'+(fail?', '+fail+' échec(s) — souvent la limite 300/jour Brevo, réessaie demain pour le reste':'')+'. Tout est archivé dans l’historique des contacts.</div></div>';
+  el('em_sendbtn').disabled=false;el('em_role').disabled=el('em_src').disabled=false;
 }
 
 /* ORGS */
@@ -902,14 +991,14 @@ async function renderCockpit(){
 }
 
 async function renderRsvp(){
-  const M={contacts:['👤','Contacts'],orgs:['🏢','Organisations'],pipeline:['📈','Pipeline'],projets:['🎯','Projets'],taches:['✅','Tâches'],finances:['💶','Finances'],treso:['💰','Trésorerie'],contenu:['🎬','Contenu'],pilotage:['📊','Pilotage']};
+  const M={contacts:['👤','Contacts'],orgs:['🏢','Organisations'],pipeline:['📈','Pipeline'],projets:['🎯','Projets'],taches:['✅','Tâches'],finances:['💶','Finances'],treso:['💰','Trésorerie'],contenu:['🎬','Contenu'],pilotage:['📊','Pilotage'],emailing:['📣','Emailing']};
   const tiles=(keys,col)=>keys.map(function(k){return moduleTile(k,M[k][0],M[k][1],col);}).join('');
   el('content').innerHTML=pageHead('🍷','RSVP','CRM · Ventes · Opérations · Finances · Marketing')+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px">'+
       famPanel('🤝','CRM & Ventes','var(--rsvp)',tiles(['contacts','orgs','pipeline'],'var(--rsvp)'))+
       famPanel('⚙️','Opérations','var(--immobilier)',tiles(['projets','taches'],'var(--immobilier)'))+
       famPanel('💶','Finances','var(--warn)',tiles(['finances','treso'],'var(--warn)'))+
-      famPanel('📣','Marketing','var(--nws)',tiles(['contenu','pilotage'],'var(--nws)'))+
+      famPanel('📣','Marketing','var(--nws)',tiles(['contenu','pilotage','emailing'],'var(--nws)'))+
     '</div>';
 }
 
