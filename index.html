@@ -291,8 +291,16 @@ document.getElementById('logout').onclick=()=>{try{localStorage.removeItem('hub_
 })();
 
 /* ───── NAV ───── */
-function toggleGrp(id){var g=document.querySelector('.navgroup[data-grp="'+id+'"]');if(g)g.classList.toggle('open');}
-function openGroupOf(elm){if(!elm)return;var g=elm.closest('.navgroup');if(g)g.classList.add('open');}
+function toggleGrp(id){
+  var g=document.querySelector('.navgroup[data-grp="'+id+'"]');if(!g)return;
+  var wasOpen=g.classList.contains('open');
+  document.querySelectorAll('.navgroup').forEach(function(x){x.classList.remove('open');});
+  if(!wasOpen)g.classList.add('open');
+}
+function openGroupOf(elm){if(!elm)return;var g=elm.closest('.navgroup');if(!g)return;
+  document.querySelectorAll('.navgroup').forEach(function(x){x.classList.remove('open');});
+  g.classList.add('open');
+}
 document.querySelectorAll('.nav[data-view]').forEach(n=>{
   n.onclick=()=>{
     const v=n.dataset.view; if(v==='soon')return;
