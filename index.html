@@ -40,8 +40,15 @@
   .nav.active{background:var(--surface2);color:var(--text)}
   .nav .ic{width:18px;text-align:center}
   .nav .soon{margin-left:auto;font-size:9px;color:var(--mut2);font-weight:700;text-transform:uppercase}
-  .navsec{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut2);font-weight:700;padding:15px 12px 5px}
-  .navsec:first-of-type{padding-top:6px}
+  .navgroup{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--surface)}
+  .navhead{width:100%;text-align:left;background:transparent;border:0;color:var(--mut);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;padding:11px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .navhead:hover{color:var(--text)}
+  .navhead .chev{font-size:11px;color:var(--mut2);transition:transform .15s ease}
+  .navgroup.open .navhead{color:var(--text)}
+  .navgroup.open .navhead .chev{transform:rotate(90deg)}
+  .navitems{display:none;padding:2px 6px 6px}
+  .navgroup.open .navitems{display:block}
+  .navitems .nav{padding:9px 12px;font-size:13.5px}
   .side .spacer{flex:1}
   .main{overflow-y:auto;padding:22px 24px 60px}
   .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
@@ -118,29 +125,37 @@
   <div class="layout">
     <aside class="side" id="side">
       <div class="brand">HUB <small>· Nico</small></div>
-      <div class="navsec">Accueil</div>
-      <a class="nav" data-view="cockpit"><span class="ic">◎</span> Cockpit</a>
-      <a class="nav" data-view="agenda"><span class="ic">📅</span> Agenda</a>
-      <div class="navsec">CRM &amp; Ventes</div>
-      <a class="nav active" data-view="contacts"><span class="ic">👤</span> Contacts</a>
-      <a class="nav" data-view="orgs"><span class="ic">🏢</span> Organisations</a>
-      <a class="nav" data-view="pipeline"><span class="ic">📈</span> Pipeline</a>
-      <div class="navsec">Communication</div>
-      <a class="nav" data-view="emailing"><span class="ic">📣</span> Emailing</a>
-      <a class="nav" data-view="comms"><span class="ic">📬</span> Comms</a>
-      <div class="navsec">Opérations</div>
-      <a class="nav" data-view="projets"><span class="ic">🎯</span> Projets</a>
-      <a class="nav" data-view="taches"><span class="ic">✅</span> Tâches</a>
-      <div class="navsec">Finances</div>
-      <a class="nav" data-view="finances"><span class="ic">💶</span> Finances</a>
-      <a class="nav" data-view="treso"><span class="ic">💰</span> Trésorerie</a>
-      <div class="navsec">Marketing</div>
-      <a class="nav" data-view="contenu"><span class="ic">🎬</span> Contenu</a>
-      <a class="nav" data-view="pilotage"><span class="ic">📊</span> Pilotage</a>
-      <div class="navsec">Perso</div>
-      <a class="nav" data-view="immobilier"><span class="ic">🏠</span> Immobilier</a>
-      <div class="navsec">Aide</div>
-      <a class="nav" data-view="guide"><span class="ic">📖</span> Guide</a>
+      <div class="navgroup" data-grp="accueil"><button class="navhead" onclick="toggleGrp('accueil')">Accueil<span class="chev">›</span></button><div class="navitems">
+        <a class="nav" data-view="cockpit">Cockpit</a>
+        <a class="nav" data-view="agenda">Agenda</a>
+      </div></div>
+      <div class="navgroup" data-grp="crm"><button class="navhead" onclick="toggleGrp('crm')">CRM &amp; Ventes<span class="chev">›</span></button><div class="navitems">
+        <a class="nav active" data-view="contacts">Contacts</a>
+        <a class="nav" data-view="orgs">Organisations</a>
+        <a class="nav" data-view="pipeline">Pipeline</a>
+      </div></div>
+      <div class="navgroup" data-grp="com"><button class="navhead" onclick="toggleGrp('com')">Communication<span class="chev">›</span></button><div class="navitems">
+        <a class="nav" data-view="emailing">Emailing</a>
+        <a class="nav" data-view="comms">Comms</a>
+      </div></div>
+      <div class="navgroup" data-grp="ops"><button class="navhead" onclick="toggleGrp('ops')">Opérations<span class="chev">›</span></button><div class="navitems">
+        <a class="nav" data-view="projets">Projets</a>
+        <a class="nav" data-view="taches">Tâches</a>
+      </div></div>
+      <div class="navgroup" data-grp="fin"><button class="navhead" onclick="toggleGrp('fin')">Finances<span class="chev">›</span></button><div class="navitems">
+        <a class="nav" data-view="finances">Finances</a>
+        <a class="nav" data-view="treso">Trésorerie</a>
+      </div></div>
+      <div class="navgroup" data-grp="mkt"><button class="navhead" onclick="toggleGrp('mkt')">Marketing<span class="chev">›</span></button><div class="navitems">
+        <a class="nav" data-view="contenu">Contenu</a>
+        <a class="nav" data-view="pilotage">Pilotage</a>
+      </div></div>
+      <div class="navgroup" data-grp="perso"><button class="navhead" onclick="toggleGrp('perso')">Perso<span class="chev">›</span></button><div class="navitems">
+        <a class="nav" data-view="immobilier">Immobilier</a>
+      </div></div>
+      <div class="navgroup" data-grp="aide"><button class="navhead" onclick="toggleGrp('aide')">Aide<span class="chev">›</span></button><div class="navitems">
+        <a class="nav" data-view="guide">Guide</a>
+      </div></div>
       <div class="spacer"></div>
       <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
     </aside>
@@ -278,13 +293,16 @@ document.getElementById('logout').onclick=()=>{try{localStorage.removeItem('hub_
 })();
 
 /* ───── NAV ───── */
+function toggleGrp(id){var g=document.querySelector('.navgroup[data-grp="'+id+'"]');if(g)g.classList.toggle('open');}
+function openGroupOf(elm){if(!elm)return;var g=elm.closest('.navgroup');if(g)g.classList.add('open');}
 document.querySelectorAll('.nav[data-view]').forEach(n=>{
   n.onclick=()=>{
     const v=n.dataset.view; if(v==='soon')return;
     document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
-    n.classList.add('active'); view=v; toggleNav(false); render();
+    n.classList.add('active'); openGroupOf(n); view=v; toggleNav(false); render();
   };
 });
+openGroupOf(document.querySelector('.nav.active'));
 function toggleNav(open){
   document.getElementById('side').classList.toggle('open',open);
   document.getElementById('ovnav').classList.toggle('on',open);
@@ -1020,7 +1038,7 @@ async function renderAgenda(){
 /* COCKPIT / ACCUEIL */
 function nav(v){
   document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
-  var n=document.querySelector('.nav[data-view="'+v+'"]'); if(n)n.classList.add('active');
+  var n=document.querySelector('.nav[data-view="'+v+'"]'); if(n){n.classList.add('active');openGroupOf(n);}
   view=v; toggleNav(false); render();
 }
 function go(v){nav(v);}
