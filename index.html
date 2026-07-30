@@ -129,6 +129,7 @@
       <a class="nav" data-view="contenu"><span class="ic">🎬</span> Contenu</a>
       <a class="nav" data-view="pilotage"><span class="ic">📊</span> Pilotage</a>
       <a class="nav" data-view="emailing"><span class="ic">📣</span> Emailing</a>
+      <a class="nav" data-view="comms"><span class="ic">📬</span> Comms</a>
       <div class="spacer"></div>
       <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
     </aside>
@@ -294,7 +295,7 @@ async function boot(){
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda',emailing:'Emailing groupé'};
+const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda',emailing:'Emailing groupé',comms:'Communications'};
 const el=id=>document.getElementById(id);
 function render(){
   el('title').textContent=TITLES[view]||'HUB';
@@ -310,6 +311,7 @@ function render(){
   if(view==='contenu')return renderContenu();
   if(view==='pilotage')return renderPilotage();
   if(view==='emailing')return renderEmailing();
+  if(view==='comms')return renderComms();
   if(view==='agenda')return renderAgenda();
   if(view==='rsvp')return renderRsvp();
   if(view==='perso')return renderPerso();
@@ -484,6 +486,44 @@ async function sendEmail(to,name,contactId){
     if(contactId){try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subject,contenu:text+(attachment?'\n[PJ: '+attachment[0].name+']':''),contact_id:contactId,source:'hub'})});}catch(e){}}
     el('modal').innerHTML='<h3>✅ Email envoyé</h3><p class="muted">À '+(name||to)+' — enregistré dans l’historique du contact.</p><div class="actions"><button class="btn sm" onclick="closeModal()">Fermer</button></div>';
   }catch(e){el('e_err').textContent='Erreur : '+e.message;el('e_send').textContent='Réessayer';el('e_send').disabled=false;}
+}
+
+/* COMMS DASHBOARD */
+async function renderComms(){
+  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  var its=[];
+  try{its=await sbAll('interactions?select=*&order=created_at.desc');}catch(e){}
+  if(!cacheContacts.length){try{cacheContacts=await sbAll('contacts?select=*&order=nom');}catch(e){}}
+  var cById={};cacheContacts.forEach(function(c){cById[c.id]=c;});
+  var isIn=function(i){return i.sens==='in'||i.source==='gmail'||i.source==='gmail-in';};
+  var sent=its.filter(function(i){return !isIn(i);}).length;
+  var recv=its.filter(isIn).length;
+  var touched=new Set(its.map(function(i){return i.contact_id;}).filter(Boolean)).size;
+  var rate=sent?Math.round(recv/sent*100):0;
+  var kpi=function(lab,val,col){return '<div style="flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px"><div style="color:var(--mut2);font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700">'+lab+'</div><div style="font-size:26px;font-weight:800;margin-top:4px'+(col?';color:'+col:'')+'">'+val+'</div></div>';};
+  var row=function(i){
+    var c=cById[i.contact_id];var nm=c?(((c.prenom||'')+' '+(c.nom||'')).trim()||c.email||'—'):'(contact hors CRM)';
+    var incoming=isIn(i);var ic=incoming?'📨':'✉️',col=incoming?'var(--good)':'var(--rsvp)';
+    var d=i.created_at?new Date(i.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    var snip=i.contenu?' · '+i.contenu.slice(0,80).replace(/\n/g,' '):'';
+    return '<div class="item"><div class="av" style="background:'+col+'22;color:'+col+'">'+ic+'</div><div class="b"><div class="n">'+nm+' — '+(i.sujet||'(sans objet)')+'</div><div class="s">'+d+' · '+(incoming?'reçu':'envoyé')+snip+'</div></div></div>';
+  };
+  el('content').innerHTML=
+   '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">'+
+     '<button class="btn sm" id="cm_sync" style="width:auto">📥 Get new mails</button>'+
+     '<button class="btn sec sm" id="cm_reload">🔄 Actualiser</button>'+
+   '</div>'+
+   '<div id="cm_msg" class="muted" style="font-size:12.5px;margin-bottom:14px"></div>'+
+   '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:22px">'+
+     kpi('Envoyés',sent,'var(--rsvp)')+kpi('Reçus',recv,'var(--good)')+kpi('Contacts touchés',touched,'')+kpi('Taux de réponse',rate+'%','var(--warn)')+
+   '</div>'+
+   '<h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);font-weight:700;margin:0 0 10px">Activité récente</h2>'+
+   '<div class="list">'+(its.length?its.slice(0,120).map(row).join(''):'<div class="empty">Aucun échange enregistré. Envoie un email ou lance « Get new mails ».</div>')+'</div>';
+  el('cm_reload').onclick=renderComms;
+  el('cm_sync').onclick=syncGmail;
+}
+async function syncGmail(){
+  var m=el('cm_msg');if(m)m.innerHTML='<span style="color:var(--warn)">Récupération Gmail à activer</span> — la passerelle serveur n’est pas encore branchée. Demande à Claude de la configurer (mot de passe d’application Gmail).';
 }
 
 /* EMAILING GROUPÉ */
