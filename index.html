@@ -402,6 +402,7 @@ function openContact(c){
     <div class="field"><label>Piliers</label>${multiSel('f_piliers',PILIERS,c.piliers||[])}</div>
     <div class="field"><label>Source</label><input id="f_source" value="${c.source||''}" placeholder="vibe, common room, bni, referral…"></div>
     <div class="field"><label>Notes</label><textarea id="f_notes">${c.notes||''}</textarea></div>
+    <div class="field" id="histwrap" style="display:none"><label>Historique des échanges</label><div id="c_hist" class="list"><div class="muted" style="font-size:12px">Chargement…</div></div></div>
     <div class="actions">
       ${isEdit?`<button class="del" onclick='delContact("${c.id}")'>Supprimer</button>`:''}
       ${c.email?`<button class="btn sec sm" onclick='openEmail(${JSON.stringify(c.email)}, ${JSON.stringify(((c.prenom||'')+' '+c.nom).trim())}, ${c.id?JSON.stringify(c.id):'null'})'>✉️ Email</button>`:''}
@@ -411,6 +412,21 @@ function openContact(c){
     <div class="err" id="ferr"></div>`);
   wireMulti('f_roles');wireMulti('f_piliers');
   el('save').onclick=()=>saveContact(c.id);
+  if(isEdit){el('histwrap').style.display='';loadHistory(c.id);}
+}
+async function loadHistory(id){
+  var box=el('c_hist'); if(!box)return;
+  try{
+    var rows=await sb('interactions?contact_id=eq.'+id+'&order=created_at.desc&limit=50');
+    if(!rows||!rows.length){box.innerHTML='<div class="muted" style="font-size:12px">Aucun échange enregistré pour l’instant.</div>';return;}
+    box.innerHTML=rows.map(function(it){
+      var incoming=(it.sens==='in'||it.source==='gmail'||it.source==='gmail-in');
+      var ic=incoming?'📨':'✉️', col=incoming?'var(--good)':'var(--rsvp)';
+      var d=it.created_at?new Date(it.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'';
+      var snip=it.contenu?' · '+it.contenu.slice(0,70).replace(/\n/g,' '):'';
+      return '<div class="item"><div class="av" style="background:'+col+'22;color:'+col+'">'+ic+'</div><div class="b"><div class="n" style="font-size:13px">'+(incoming?'↩︎ ':'')+(it.sujet||'(sans objet)')+'</div><div class="s">'+d+' · '+(incoming?'reçu':'envoyé')+snip+'</div></div></div>';
+    }).join('');
+  }catch(e){box.innerHTML='<div class="muted" style="font-size:12px">Historique indisponible.</div>';}
 }
 async function saveContact(id){
   const body={
