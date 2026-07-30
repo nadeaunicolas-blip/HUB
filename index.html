@@ -40,6 +40,8 @@
   .nav.active{background:var(--surface2);color:var(--text)}
   .nav .ic{width:18px;text-align:center}
   .nav .soon{margin-left:auto;font-size:9px;color:var(--mut2);font-weight:700;text-transform:uppercase}
+  .navsec{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut2);font-weight:700;padding:15px 12px 5px}
+  .navsec:first-of-type{padding-top:6px}
   .side .spacer{flex:1}
   .main{overflow-y:auto;padding:22px 24px 60px}
   .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
@@ -116,20 +118,28 @@
   <div class="layout">
     <aside class="side" id="side">
       <div class="brand">HUB <small>· Nico</small></div>
+      <div class="navsec">Accueil</div>
       <a class="nav" data-view="cockpit"><span class="ic">◎</span> Cockpit</a>
       <a class="nav" data-view="agenda"><span class="ic">📅</span> Agenda</a>
+      <div class="navsec">CRM &amp; Ventes</div>
       <a class="nav active" data-view="contacts"><span class="ic">👤</span> Contacts</a>
       <a class="nav" data-view="orgs"><span class="ic">🏢</span> Organisations</a>
       <a class="nav" data-view="pipeline"><span class="ic">📈</span> Pipeline</a>
-      <a class="nav" data-view="projets"><span class="ic">🎯</span> Projets</a>
-      <a class="nav" data-view="taches"><span class="ic">✅</span> Tâches</a>
-      <a class="nav" data-view="finances"><span class="ic">💶</span> Finances</a>
-      <a class="nav" data-view="treso"><span class="ic">💰</span> Trésorerie</a>
-      <a class="nav" data-view="immobilier"><span class="ic">🏠</span> Immobilier</a>
-      <a class="nav" data-view="contenu"><span class="ic">🎬</span> Contenu</a>
-      <a class="nav" data-view="pilotage"><span class="ic">📊</span> Pilotage</a>
+      <div class="navsec">Communication</div>
       <a class="nav" data-view="emailing"><span class="ic">📣</span> Emailing</a>
       <a class="nav" data-view="comms"><span class="ic">📬</span> Comms</a>
+      <div class="navsec">Opérations</div>
+      <a class="nav" data-view="projets"><span class="ic">🎯</span> Projets</a>
+      <a class="nav" data-view="taches"><span class="ic">✅</span> Tâches</a>
+      <div class="navsec">Finances</div>
+      <a class="nav" data-view="finances"><span class="ic">💶</span> Finances</a>
+      <a class="nav" data-view="treso"><span class="ic">💰</span> Trésorerie</a>
+      <div class="navsec">Marketing</div>
+      <a class="nav" data-view="contenu"><span class="ic">🎬</span> Contenu</a>
+      <a class="nav" data-view="pilotage"><span class="ic">📊</span> Pilotage</a>
+      <div class="navsec">Perso</div>
+      <a class="nav" data-view="immobilier"><span class="ic">🏠</span> Immobilier</a>
+      <div class="navsec">Aide</div>
       <a class="nav" data-view="guide"><span class="ic">📖</span> Guide</a>
       <div class="spacer"></div>
       <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
@@ -572,6 +582,10 @@ async function syncGmail(){
 }
 
 /* EMAILING GROUPÉ */
+function fillVars(s,c){
+  return (s||'').replace(/{prenom}/g,(c.prenom||'').trim()).replace(/{nom}/g,(c.nom||'').trim())
+    .replace(/ +([,.!?;:])/g,'$1').replace(/[ \t]{2,}/g,' ');
+}
 function emailingRecipients(){
   var role=el('em_role')?el('em_role').value:'';
   var liste=el('em_src')?el('em_src').value:'';
@@ -585,7 +599,7 @@ function emailingRecipients(){
 function emPreview(){
   var r=emailingRecipients()[0];
   if(!r){el('em_prev').innerHTML='<span class="muted">Aucun destinataire avec email dans ce segment.</span>';return;}
-  var fill=function(s){return (s||'').replace(/{prenom}/g,r.prenom||'').replace(/{nom}/g,r.nom||'');};
+  var fill=function(s){return fillVars(s,r);};
   el('em_prev').innerHTML='<div style="font-size:12px;color:var(--mut2)">Aperçu pour '+((r.prenom||'')+' '+(r.nom||'')).trim()+' &lt;'+r.email+'&gt;</div>'+
     '<div style="margin-top:8px;font-weight:700">'+(fill(el('em_subj').value)||'<span class="muted">(objet)</span>')+'</div>'+
     '<div style="margin-top:6px;white-space:pre-wrap;color:var(--mut)">'+(fill(el('em_body').value)||'<span class="muted">(message)</span>')+'</div>'+
@@ -631,8 +645,8 @@ async function emSend(){
   el('em_progress').innerHTML='<div style="background:var(--surface2);border-radius:8px;height:10px;overflow:hidden;margin-bottom:8px"><div id="em_barfill" style="height:100%;width:0;background:var(--good);transition:width .2s"></div></div><div id="em_barlbl" class="muted" style="font-size:13px"></div>';
   for(var i=0;i<N;i++){
     var c=recips[i];
-    var subj=subject.replace(/{prenom}/g,c.prenom||'').replace(/{nom}/g,c.nom||'');
-    var text=body.replace(/{prenom}/g,c.prenom||'').replace(/{nom}/g,c.nom||'');
+    var subj=fillVars(subject,c);
+    var text=fillVars(body,c);
     try{
       var r=await fetch(SUPA_URL+'/functions/v1/send-email',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({to:c.email,toName:((c.prenom||'')+' '+(c.nom||'')).trim(),subject:subj,text:text})});
       var d=await r.json().catch(function(){return {};});
