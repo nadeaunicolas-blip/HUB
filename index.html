@@ -460,6 +460,10 @@ async function delContact(id){
 function openEmail(to,name,contactId){
   openModal(`<h3>✉️ Email à ${name||to}</h3>
     <p class="muted" style="font-size:12px;margin:-6px 0 14px">Depuis nicolas@rsvp-club.com · signature ajoutée automatiquement · enregistré dans l'historique</p>
+    <div class="field"><label>Envoyer via</label><select id="e_chan">
+      <option value="gmail">✅ Gmail — perso, boîte principale (idéal 1-à-1)</option>
+      <option value="brevo">📣 Brevo — volume / campagne</option>
+    </select></div>
     <div class="field"><label>Objet</label><input id="e_subj"></div>
     <div class="field"><label>Message</label><textarea id="e_body" style="min-height:150px"></textarea></div>
     <div class="field"><label>📎 Pièce jointe (PDF, image… max ~9 Mo)</label><input type="file" id="e_file" style="font-size:13px"></div>
@@ -479,11 +483,13 @@ async function sendEmail(to,name,contactId){
       if(f.size>9*1024*1024)throw new Error('Fichier trop lourd (max ~9 Mo).');
       attachment=[{content:await fileToB64(f),name:f.name}];
     }
+    const chan=(el('e_chan')&&el('e_chan').value)||'gmail';
+    const fn=chan==='gmail'?'send-gmail':'send-email';
     const body={to,toName:name,subject,text};if(attachment)body.attachment=attachment;
-    const r=await fetch(SUPA_URL+'/functions/v1/send-email',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch(SUPA_URL+'/functions/v1/'+fn,{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||d.error)throw new Error(d.error||('HTTP '+r.status));
-    if(contactId){try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subject,contenu:text+(attachment?'\n[PJ: '+attachment[0].name+']':''),contact_id:contactId,source:'hub'})});}catch(e){}}
+    if(contactId){try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subject,contenu:text+(attachment?'\n[PJ: '+attachment[0].name+']':''),contact_id:contactId,source:(chan==='gmail'?'gmail':'hub'),sens:'out'})});}catch(e){}}
     el('modal').innerHTML='<h3>✅ Email envoyé</h3><p class="muted">À '+(name||to)+' — enregistré dans l’historique du contact.</p><div class="actions"><button class="btn sm" onclick="closeModal()">Fermer</button></div>';
   }catch(e){el('e_err').textContent='Erreur : '+e.message;el('e_send').textContent='Réessayer';el('e_send').disabled=false;}
 }
