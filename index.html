@@ -130,6 +130,7 @@
       <a class="nav" data-view="pilotage"><span class="ic">📊</span> Pilotage</a>
       <a class="nav" data-view="emailing"><span class="ic">📣</span> Emailing</a>
       <a class="nav" data-view="comms"><span class="ic">📬</span> Comms</a>
+      <a class="nav" data-view="guide"><span class="ic">📖</span> Guide</a>
       <div class="spacer"></div>
       <a class="nav" id="logout"><span class="ic">⏻</span> Déconnexion</a>
     </aside>
@@ -295,7 +296,7 @@ async function boot(){
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda',emailing:'Emailing groupé',comms:'Communications'};
+const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda',emailing:'Emailing groupé',comms:'Communications',guide:'Mode d’emploi'};
 const el=id=>document.getElementById(id);
 function render(){
   el('title').textContent=TITLES[view]||'HUB';
@@ -312,6 +313,7 @@ function render(){
   if(view==='pilotage')return renderPilotage();
   if(view==='emailing')return renderEmailing();
   if(view==='comms')return renderComms();
+  if(view==='guide')return renderGuide();
   if(view==='agenda')return renderAgenda();
   if(view==='rsvp')return renderRsvp();
   if(view==='perso')return renderPerso();
@@ -492,6 +494,43 @@ async function sendEmail(to,name,contactId){
     if(contactId){try{await sb('interactions',{method:'POST',prefer:'return=minimal',body:JSON.stringify({type:'email',sujet:subject,contenu:text+(attachment?'\n[PJ: '+attachment[0].name+']':''),contact_id:contactId,source:(chan==='gmail'?'gmail':'hub'),sens:'out'})});}catch(e){}}
     el('modal').innerHTML='<h3>✅ Email envoyé</h3><p class="muted">À '+(name||to)+' — enregistré dans l’historique du contact.</p><div class="actions"><button class="btn sm" onclick="closeModal()">Fermer</button></div>';
   }catch(e){el('e_err').textContent='Erreur : '+e.message;el('e_send').textContent='Réessayer';el('e_send').disabled=false;}
+}
+
+/* GUIDE / MODE D'EMPLOI */
+function renderGuide(){
+  var sec=function(ic,titre,corps){return '<div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:22px">'+ic+'</span><span style="font-weight:800;font-size:16px">'+titre+'</span></div><div style="color:var(--mut);font-size:14px;line-height:1.6">'+corps+'</div></div>';};
+  var b=function(t){return '<b style="color:var(--text)">'+t+'</b>';};
+  el('content').innerHTML='<div style="max-width:820px">'+
+   '<div style="background:linear-gradient(135deg,#8a1c2b22,transparent);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px"><div style="font-size:20px;font-weight:800">📖 Mode d’emploi du HUB</div><div style="color:var(--mut);font-size:13.5px;margin-top:6px">Ton poste de pilotage : contacts, emails, campagnes, finances et agenda, au même endroit. Ci-dessous, «&nbsp;comment faire&nbsp;» pour chaque tâche. Besoin d’autre chose&nbsp;? Reviens demander à Claude.</div></div>'+
+
+   sec('🏠','L’accueil (Cockpit)',
+     'La photo de la Vinothèque, ton '+b('agenda')+' du jour, et le '+b('compte à rebours objectif CA')+' (réalisé vs 473 k€). En dessous, tes '+b('3 univers')+' cliquables : '+b('RSVP')+' (tout le business), '+b('Perso')+' (Immobilier), '+b('NWS')+' (à venir). Clique un univers → tu accèdes à ses modules.')+
+
+   sec('👤','Retrouver un contact',
+     'Onglet '+b('Contacts')+'. Cherche par '+b('nom de famille')+' ou par '+b('numéro')+' (évite le prénom : trop de doublons italiens 😉). Les puces du haut filtrent par '+b('rôle')+' et par '+b('liste Brevo')+' (CCI, BNI, Vinothèque, Leads Meta…) — elles se combinent. Clique une fiche pour voir tél/email, ses listes, et son '+b('Historique des échanges')+' (emails envoyés ✉️ et reçus 📨).')+
+
+   sec('✉️','Écrire un email à UNE personne',
+     'Ouvre la fiche du contact → bouton '+b('✉️ Email')+'. Tu choisis le canal :<br>• '+b('Gmail')+' → part de nicolas@rsvp-club.com, tombe en '+b('boîte principale')+'. À utiliser pour tes '+b('premiers contacts et messages perso')+'.<br>• '+b('Brevo')+' → pour le volume.<br>La '+b('signature')+' s’ajoute toute seule, et tu peux joindre un '+b('PDF')+'. Tout est archivé dans la fiche.')+
+
+   sec('📣','Envoyer à TOUT un groupe (campagne)',
+     'Onglet '+b('Emailing')+'. Choisis un '+b('segment')+' (Rôle + Liste Brevo) → le HUB t’affiche le nombre de destinataires avec email. Écris '+b('une seule fois')+' ton message avec les variables '+b('{prenom}')+' et '+b('{nom}')+' : chacun reçoit le sien personnalisé. Un '+b('aperçu')+' te montre le rendu, puis «&nbsp;Envoyer&nbsp;» part par lots (limite '+b('300/jour')+' côté Brevo).')+
+
+   sec('🎯','La règle d’or des emails',
+     b('Premier contact / message qui compte')+' → '+b('Gmail')+' (boîte principale, ça se voit, ça donne envie de répondre). Une fois que la personne '+b('a répondu')+' → tu peux la basculer dans une '+b('campagne Brevo')+'. Chaud d’abord, échelle ensuite.')+
+
+   sec('📬','Suivre tous mes échanges',
+     'Onglet '+b('Comms')+' : compteurs '+b('envoyés / reçus / contacts touchés / taux de réponse')+', et le fil d’activité de toutes tes conversations. Le bouton '+b('🔄 Actualiser')+' recharge la vue.')+
+
+   sec('💶','Finances, Trésorerie & le reste',
+     'Les modules '+b('Finances')+' et '+b('Trésorerie')+' suivent ta compta et ta trajectoire de cash. '+b('Immobilier')+' (simulateur ISA + Edolo), '+b('Contenu')+' (suivi vidéos Vinothèque) et '+b('Pilotage')+' sont tes tableaux de bord dédiés. '+b('Tâches')+' = ton Kanban.')+
+
+   sec('🤖','Pousser de l’info via Claude',
+     'Le plus puissant : tu n’as pas à tout saisir à la main. Dis à Claude, en langage normal — «&nbsp;'+b('ajoute cette dépense')+'&nbsp;», «&nbsp;'+b('mets à jour le CA')+'&nbsp;», «&nbsp;'+b('importe ces contacts')+'&nbsp;», «&nbsp;'+b('retrouve mes échanges avec X')+'&nbsp;» — et ça se met à jour dans le HUB.')+
+
+   sec('💡','Deux réflexes utiles',
+     '1. Après une mise à jour faite par Claude, fais '+b('Cmd+Shift+R')+' (rafraîchissement forcé) pour voir la dernière version.<br>2. Une question, un besoin, un bug ? '+b('Reviens demander à Claude')+' — c’est ta FAQ vivante, et il fait évoluer le HUB au fil de l’eau.')+
+
+   '</div>';
 }
 
 /* COMMS DASHBOARD */
