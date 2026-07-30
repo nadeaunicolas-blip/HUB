@@ -125,16 +125,14 @@
   <div class="layout">
     <aside class="side" id="side">
       <div class="brand">HUB <small>· Nico</small></div>
-      <div class="navgroup" data-grp="accueil"><button class="navhead" onclick="toggleGrp('accueil')">Accueil<span class="chev">›</span></button><div class="navitems">
-        <a class="nav" data-view="cockpit">Cockpit</a>
+      <div class="navgroup open" data-grp="accueil"><button class="navhead" onclick="toggleGrp('accueil')">Accueil<span class="chev">›</span></button><div class="navitems">
+        <a class="nav active" data-view="cockpit">Cockpit</a>
         <a class="nav" data-view="agenda">Agenda</a>
       </div></div>
       <div class="navgroup" data-grp="crm"><button class="navhead" onclick="toggleGrp('crm')">CRM &amp; Ventes<span class="chev">›</span></button><div class="navitems">
-        <a class="nav active" data-view="contacts">Contacts</a>
+        <a class="nav" data-view="contacts">Contacts</a>
         <a class="nav" data-view="orgs">Organisations</a>
         <a class="nav" data-view="pipeline">Pipeline</a>
-      </div></div>
-      <div class="navgroup" data-grp="com"><button class="navhead" onclick="toggleGrp('com')">Communication<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="emailing">Emailing</a>
         <a class="nav" data-view="comms">Comms</a>
       </div></div>
@@ -190,7 +188,7 @@ const PIL_COLOR = {rsvp:'var(--rsvp)',nws:'var(--nws)',immobilier:'var(--immobil
 const ROLE_LABEL = {client:'Client',prospect:'Prospect',fournisseur:'Fournisseur',partenaire:'Partenaire',financeur:'Financeur'};
 const STAGES = [['nouveau','Nouveau'],['qualifie','Qualifié'],['proposition','Proposition'],['negociation','Négociation'],['gagne','Gagné'],['perdu','Perdu']];
 
-let token=null, email=null, view='contacts';
+let token=null, email=null, view='cockpit';
 let cacheOrgs=[], cacheContacts=[];
 let filterRole=null, filterPil=null, filterSrc=null, search='';
 const SRC_LABEL={'brevo:bni':'BNI','brevo:cci':'CCI','brevo:corporate':'Corporate','brevo:horeca':'Horeca','brevo:leads-meta':'Leads Meta','brevo:vino-optin':'Vinothèque','brevo:vino-whatsapp':'Vino WhatsApp','brevo:clients-btob':'Clients B2B','brevo:conversations':'Conversations','brevo:autre':'Brevo'};
