@@ -373,6 +373,7 @@ async function renderContacts(){
     <div class="toolbar" id="fwa"></div>
     <div class="toolbar" id="frole"></div>
     ${cats.length?'<div class="toolbar" id="fcat"></div>':''}
+    <div class="toolbar"><button class="btn sec sm" onclick="exportContacts()">Exporter (CSV)</button><button class="btn sec sm" onclick="copyNumbers()">Copier les numéros</button></div>
     <div id="clist" class="list"></div>`;
   const REACH=[['','Tous'],['both','Email + Tél'],['email','Email seul'],['tel','Tél seul'],['none','Aucun']];
   el('freach').innerHTML=REACH.map(([k,l])=>`<span class="chip ${(filterReach||'')===k?'on':''}" data-reach="${k}">${l}</span>`).join('');
@@ -395,7 +396,7 @@ async function renderContacts(){
   el('q').oninput=e=>{search=e.target.value;drawContacts();};
   drawContacts();
 }
-function drawContacts(){
+function currentRows(){
   let rows=cacheContacts.slice();
   if(filterRole)rows=rows.filter(c=>(c.roles||[]).includes(filterRole));
   if(filterPil)rows=rows.filter(c=>(c.piliers||[]).includes(filterPil));
@@ -404,6 +405,27 @@ function drawContacts(){
     return filterReach==='both'?(e&&t):filterReach==='email'?(e&&!t):filterReach==='tel'?(t&&!e):filterReach==='none'?(!e&&!t):true;});}
   if(filterWa)rows=rows.filter(c=>waStatus(c)===filterWa);
   if(search){const s=search.toLowerCase();rows=rows.filter(c=>((c.prenom||'')+' '+(c.nom||'')+' '+(c.email||'')+' '+(c.telephone||'')).toLowerCase().includes(s));}
+  return rows;
+}
+function exportContacts(){
+  var rows=currentRows();
+  if(!rows.length){alert('Aucun contact à exporter avec ces filtres.');return;}
+  var esc=function(v){v=(v==null?'':String(v));return '"'+v.replace(/"/g,'""')+'"';};
+  var head=['Prénom','Nom','Téléphone','Email','Listes','Rôles','Statut WhatsApp'];
+  var lines=[head.map(esc).join(',')];
+  rows.forEach(function(c){lines.push([c.prenom,c.nom,c.telephone,c.email,(c.listes||[]).join(' | '),(c.roles||[]).join(' | '),WA_LABEL[waStatus(c)]||''].map(esc).join(','));});
+  var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='contacts_'+rows.length+'.csv';document.body.appendChild(a);a.click();a.remove();
+}
+function copyNumbers(){
+  var rows=currentRows().filter(c=>c.telephone&&c.telephone.trim());
+  if(!rows.length){alert('Aucun numéro dans ce segment.');return;}
+  var nums=rows.map(c=>c.telephone.trim()).join('\n');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(nums).then(function(){alert(rows.length+' numéros copiés dans le presse-papier.');},function(){prompt('Copie auto impossible — sélectionne et copie :',nums);});}
+  else{prompt('Copie ces numéros :',nums);}
+}
+function drawContacts(){
+  let rows=currentRows();
   const orgName=id=>{const o=cacheOrgs.find(o=>o.id===id);return o?o.nom:'';};
   if(!rows.length){el('clist').innerHTML='<div class="empty">Aucun contact.</div>';return;}
   const shown=rows.slice(0,300);
