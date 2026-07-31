@@ -191,12 +191,11 @@ const STAGES = [['nouveau','Nouveau'],['qualifie','Qualifié'],['proposition','P
 let token=null, email=null, view='cockpit';
 let cacheOrgs=[], cacheContacts=[];
 let filterRole=null, filterPil=null, filterSrc=null, filterReach=null, filterWa=null, search='';
-var WA_OPTIN='Vinothèque - WhatsApp OK (LVOK)', WA_POOL='Vinothèque - À opt-in';
 function waStatus(c){var L=c.listes||[];
-  if(L.indexOf(WA_OPTIN)>=0)return 'optin';
+  if(L.some(function(x){return /whatsapp ok|lvok/i.test(x);}))return 'optin';
+  if(!(c.telephone&&c.telephone.trim()))return '';
   if(c.wa_contacted)return 'contacte';
-  if(L.indexOf(WA_POOL)>=0)return 'a_contacter';
-  return '';}
+  return 'a_contacter';}
 var WA_LABEL={optin:'Opt-in',contacte:'Contacté',a_contacter:'À contacter'};
 const SRC_LABEL={'brevo:bni':'BNI','brevo:cci':'CCI','brevo:corporate':'Corporate','brevo:horeca':'Horeca','brevo:leads-meta':'Leads Meta','brevo:vino-optin':'Vinothèque','brevo:vino-whatsapp':'Vino WhatsApp','brevo:clients-btob':'Clients B2B','brevo:conversations':'Conversations','brevo:autre':'Brevo'};
 const srcLabel=s=>SRC_LABEL[s]||(s?s.replace('brevo:',''):'');
