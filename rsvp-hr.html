@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Rsvp Hr Hub Employes",
+  "schemaVersion": 1,
+  "description": "HR Hub RSVP : suivi par employé (contrat, nets mensuels, soldes ferie/TFR, alertes) avec documents en direct depuis Google Drive (dossiers Employes, Paghe, F24, Proforma, contrats, tirocinio).",
+  "mcpTools": [
+    "mcp__dc6a581d-299c-4534-9620-64bea6a56db2__search_files"
+  ],
+  "mcpServerNames": [
+    "Google Drive"
+  ]
+}
+</script>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RSVP — HR Hub Employés</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root{color-scheme:light;
+    --bg:#f6f4f0;--card:#fff;--ink:#2b2620;--muted:#8a8177;--accent:#7a1f2b;
+    --ok:#3e7a4e;--warn:#c47b1f;--bad:#b0413e;--line:#e5dfd6;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);padding:18px;font-size:14px}
+  h1{font-size:18px} h1 span{color:var(--accent)}
+  .sub{color:var(--muted);font-size:12px;margin:3px 0 14px}
+  .tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+  .tab{padding:7px 14px;border:1px solid var(--line);border-radius:18px;background:var(--card);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .panel{display:none}.panel.active{display:block}
+  .cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;flex:1;min-width:140px}
+  .card .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .card .v{font-size:18px;font-weight:700;margin-top:3px}
+  .card .d{font-size:11px;color:var(--muted);margin-top:2px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12.5px;margin-bottom:14px}
+  th{background:#efe9e0;text-align:left;padding:7px 10px;font-size:11px;text-transform:uppercase;color:#6b6157}
+  td{padding:6px 10px;border-top:1px solid var(--line)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  h2{font-size:14px;margin:16px 0 8px;color:var(--accent)}
+  .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:600}
+  .pill.ok{background:#e3efe6;color:var(--ok)}.pill.warn{background:#f7ead6;color:var(--warn)}.pill.bad{background:#f6e2e1;color:var(--bad)}
+  .alert{background:var(--card);border-left:3px solid var(--warn);border-radius:6px;padding:8px 12px;margin-bottom:7px;font-size:12.5px}
+  .alert.bad{border-left-color:var(--bad)}
+  .profile{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:14px}
+  .profile .item{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+  .profile .item .k{font-size:10px;color:var(--muted);text-transform:uppercase}
+  .profile .item .v{font-size:12.5px;font-weight:600;margin-top:2px}
+  .doclist{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:14px}
+  .doc{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px}
+  .doc:first-child{border-top:none}
+  .doc a{color:var(--accent);text-decoration:none;font-weight:600;flex:1}
+  .doc a:hover{text-decoration:underline}
+  .doc .meta{color:var(--muted);font-size:11px;white-space:nowrap}
+  .doc .ico{width:20px;text-align:center}
+  .doc .dl{margin-left:8px;text-decoration:none;font-size:15px;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:#faf7f2;color:var(--ink)}
+  .doc .dl:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .folderhead{padding:9px 12px;font-weight:700;font-size:12.5px;background:#faf7f2;cursor:pointer;border-top:1px solid var(--line)}
+  .folderhead:first-child{border-top:none}
+  .folderbody{display:none}
+  .folderbody.open{display:block}
+  .loading{color:var(--muted);font-style:italic;padding:10px 12px}
+  .err{color:var(--bad);padding:10px 12px;font-size:12.5px}
+  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;height:180px;margin-bottom:14px;position:relative}
+</style>
+</head>
+<body>
+<h1>RSVP <span>·</span> HR Hub — Employés &amp; Documents</h1>
+<div class="sub">Documents en direct depuis Google Drive (RSVP Admin HR) · Chiffres paie : Elenco Netti &amp; LUL mai 2025 → juillet 2026 (14ma incluse) · MàJ 31/07/2026</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab" data-t="overview">📊 Vue d'ensemble</div>
+  <div class="tab" data-t="fedro">Fedro</div>
+  <div class="tab" data-t="richard">Richard</div>
+  <div class="tab" data-t="francesco">Francesco</div>
+  <div class="tab" data-t="margot">Margot</div>
+  <div class="tab" data-t="mija">Mija</div>
+  <div class="tab" data-t="paghe">🗂 Paghe mensuelles</div>
+  <div class="tab" data-t="f24">🧾 F24 &amp; Proforma</div>
+</div>
+
+<div class="panel" id="overview">
+  <div class="cards">
+    <div class="card"><div class="k">Masse nette juillet 2026</div><div class="v">4 237 €</div><div class="d">+ 14ma 3 142 € (Fedro/Richard/Francesco)</div></div>
+    <div class="card"><div class="k">Nets 12 derniers mois</div><div class="v">~54 400 €</div><div class="d">août 2025 → juillet 2026, 13ma + 14ma incluses</div></div>
+    <div class="card"><div class="k">Effectif</div><div class="v">5</div><div class="d">3 dipendenti + 1 tirocinante + 1 a chiamata dormant</div></div>
+    <div class="card"><div class="k">Total versé depuis mai 2025</div><div class="v">67 059 €</div><div class="d">archive paie complète, aucun mois manquant</div></div>
+  </div>
+  <h2>Points d'attention</h2>
+  <div class="alert bad"><b>Francesco</b> — contrat PT 37,5% (~60 h/mois) vs ~80 h réelles chaque mois → aumento à discuter avec Aldo.</div>
+  <div class="alert"><b>Ferie dans le rouge</b> — Fedro report AP −24 h, Richard −17,33 h (au 30/06/26). Richard : re-crédit de 3 j en cours (récupération juillet).</div>
+  <div class="alert"><b>Margot</b> — a chiamata sans aucune prestation depuis déc. 2025. Comunicazione preventiva obligatoire avant tout rappel.</div>
+  <div class="alert"><b>Manquants</b> — 3 lettres d'assunzione signées demandées à Aldo (Fedro CDI, Richard apprendistato, Margot a chiamata) · Proposta Collaborazione Francesco à faire signer · Proforma CB Q2 2026 (457-2026) à payer.</div>
+  <h2>Nets mensuels (€)</h2>
+  <div id="ovTable"></div>
+</div>
+
+<div class="panel" id="fedro"></div>
+<div class="panel" id="richard"></div>
+<div class="panel" id="francesco"></div>
+<div class="panel" id="margot"></div>
+<div class="panel" id="mija"></div>
+
+<div class="panel" id="paghe">
+  <h2>Cycles de paie (LUL, Riepilogo, Elenco netti)</h2>
+  <div class="doclist" id="pagheList"><div class="loading">Chargement depuis Google Drive…</div></div>
+</div>
+
+<div class="panel" id="f24">
+  <h2>F24 (échéances mensuelles)</h2>
+  <div class="doclist" id="f24List"><div class="loading">Chargement…</div></div>
+  <h2>Proforma CB Associati</h2>
+  <div class="doclist" id="profList"><div class="loading">Chargement…</div></div>
+  <h2>Annuels / INAIL</h2>
+  <div class="doclist" id="annList"><div class="loading">Chargement…</div></div>
+</div>
+
+<script>
+const DRIVE_TOOL = "mcp__dc6a581d-299c-4534-9620-64bea6a56db2__search_files";
+const F = { // folder ids
+  emp:{fedro:"1Njhfx-KZCLpkL26EEr7Db7iZ5Y6Peglw",richard:"1E0Hr5h0xPMqvM40vJn8VOC57TDqBIwUh",
+       francesco:"1bGYahN-tUpMypBP_hdxUgkp10cAwg7sM",margot:"1qzfIcjF5hnz9MCVSeYHJegdMikyxG0KA",
+       mija:"1A3JPlf9GvmHahzwL9D3O-i-89sSxrQgY"},
+  pdfFinaux:"1JXsxBMZYWGBvhi_XkagLeGUKHnLiluGb",
+  paghe:"1LZAK91FQRLeVaPpjB2JoAJzk2RiFMrEc",
+  f24:"1nKiRda7xAPUMpdlrTBbpbyjWb5Y2fIZR",
+  proforma:"1gamfgS7Xm0xkSP_fKKfhxDrIbjsK66H0",
+  contratsFedro:"12lVaT-k-naTxNeIEgHVmM1WXpy38sCfv",
+  tiroMargot:"1ufMNDtncvqLvWBNs2uOQRx9NpOUibcV2",
+  tiroMija:"1GUDFUmwPJC7l5TUTUxdJqC7z-pdwl6Yj",
+  annuels:"1W3_3i2w0vsP5WQwRjhvhZNCBLyvaK9lv",
+  inail:"1cL9fe5gZUtyOIFdw6JSDUiQIg2968ynG"
+};
+const MONTHS=["05/25","06/25","07/25","14ma 25","08/25","09/25","10/25","11/25","12/25","13ma 25","01/26","02/26","03/26","04/26","05/26","06/26","07/26","14ma 26"];
+const NETS={
+  fedro:[1221,1235,1244,163,1282,1236,1244,1282,1283,650,1214,1363,1533,1523,1576,1561,1571,1256],
+  richard:[1571,1561,1571,211,1620,1563,1571,179,1506,783,1528,1501,1547,1538,1647,1490,1555,1357],
+  francesco:[588,602,602,78,602,601,602,625,756,315,602,602,598,575,598,611,611,529],
+  margot:[650,650,710,null,500,620,875,865,177.8,96.19,null,null,null,null,null,null,null,null],
+  mija:[null,null,null,null,null,null,null,167,500,null,500,500,950,625,790,550,500,null]
+};
+const PROFILES={
+  fedro:{name:"Fedro Manca — Manager",items:[
+    ["Contrat","CDI Impiegato 3° liv. (CCNL Turismo)"],["Assunzione (CB)","01/05/2025 · chez RSVP dep. 2022"],
+    ["Horaire","Full-time 40h dep. avr. 2026 · repos jeu-ven"],["Brut (06/26)","1 804,09 €/mois"],
+    ["Soldes 30/06/26","Ferie 68,87h (AP −24) · ROL 48,97h"],["TFR","814,63 € + quota 2026 694,75 €"]],
+    docs:["emp:fedro","contratsFedro"],buste:"Buste_Fedro_Manca"},
+  richard:{name:"Richard Fiocchi — Salle",items:[
+    ["Contrat","Apprendistato liv. 4 (85% dep. mai 2026)"],["Assunzione","01/05/2025 (tirocinio 2024-25 avant)"],
+    ["Horaire","Full-time ~168h/mois"],["Brut (06/26)","~1 750 €/mois"],
+    ["Soldes 30/06/26","Ferie 32h (AP −17,33) · ROL 52h · re-crédit 3 j en cours"],["TFR","1 014,60 € + 783 €"]],
+    docs:["emp:richard"],buste:"Buste_Richard_Fiocchi"},
+  francesco:{name:"Francesco Longhi — Communication / Salle",items:[
+    ["Contrat","CDI part-time 37,5% · 4° liv."],["Assunzione (CB)","01/05/2025 · chez RSVP dep. 2023"],
+    ["Horaire","≈15 h/sem (60 h/mois payées) ⚠️ ~80 h réelles"],["Brut (06/26)","636,15 €/mois"],
+    ["Soldes 30/06/26","Ferie 33h (+25 AP) · ROL 19,5h"],["TFR","382,88 € + 260,34 €"]],
+    docs:["emp:francesco"],buste:"Buste_Francesco_Longhi"},
+  margot:{name:"Margot Retif de Turckheim — A chiamata",items:[
+    ["Contrat","Lavoro intermittente dep. 21/11/2025 · 10 € net/h"],["Avant","Tirocinio 09/05 → 21/11/2025"],
+    ["Statut","Dormant — 0 chiamata en 2026"],["Obligation","Comunicazione preventiva avant chaque prestation"]],
+    docs:["emp:margot","tiroMargot"],buste:"Buste_Margot"},
+  mija:{name:"Mija Di Marco — Tirocinante",items:[
+    ["Contrat","Tirocinio extracurr. dep. 21/11/2025"],["Proroga","19/05/2026 (TFO-25-LOM-306314)"],
+    ["Indemnité","500 €/mois min. + extras"],["Tuteurs","Fedro / Nicolas"]],
+    docs:["emp:mija","tiroMija"],buste:"Buste_Mija"}
+};
+const cache={};
+async function drive(q){
+  if(cache[q]) return cache[q];
+  const r=await window.cowork.callMcpTool(DRIVE_TOOL,{query:q,excludeContentSnippets:true,pageSize:50});
+  if(r.isError) throw new Error("Drive: "+JSON.stringify(r.content));
+  const data=r.structuredContent ?? JSON.parse(r.content[0].text);
+  cache[q]=data.files||[];
+  return cache[q];
+}
+function fmtSize(s){s=+s;if(!s)return"";return s>1e6?(s/1e6).toFixed(1)+" Mo":Math.round(s/1e3)+" Ko"}
+function fmtDate(d){return d?new Date(d).toLocaleDateString("fr-FR"):""}
+function ico(m){if(m==="application/vnd.google-apps.folder")return"📁";if(m==="application/pdf")return"📄";if(m&&m.includes("word"))return"📝";return"🗎"}
+function docRow(f){
+  const dl = f.mimeType==="application/vnd.google-apps.folder" ? "" :
+    `<a class="dl" href="https://drive.google.com/uc?export=download&id=${f.id}" target="_blank" title="Télécharger">⬇</a>`;
+  return `<div class="doc"><span class="ico">${ico(f.mimeType)}</span><a href="${f.viewUrl}" target="_blank">${f.title}</a><span class="meta">${fmtSize(f.fileSize)} · ${fmtDate(f.modifiedTime)}</span>${dl}</div>`}
+function renderDocs(el,files){
+  el.innerHTML = files.length? files.sort((a,b)=>a.title.localeCompare(b.title)).map(docRow).join("") : '<div class="loading">Aucun document</div>';
+}
+function netTable(key){
+  let rows=MONTHS.map((m,i)=>{const v=NETS[key][i];return v==null?"":`<tr><td>${m}</td><td class="num">${v.toLocaleString("fr-FR")} €</td></tr>`}).join("");
+  const tot=NETS[key].reduce((a,b)=>a+(b||0),0);
+  return `<table><tr><th>Mois</th><th class="num">Net versé</th></tr>${rows}<tr><td><b>Total</b></td><td class="num"><b>${tot.toLocaleString("fr-FR",{maximumFractionDigits:0})} €</b></td></tr></table>`;
+}
+const charts={};
+function makeChart(key){
+  if(charts[key])return;
+  const ctx=document.getElementById("ch_"+key);
+  if(!ctx||!window.Chart)return;
+  charts[key]=new Chart(ctx,{type:"bar",
+    data:{labels:MONTHS,datasets:[{label:"Net €",data:NETS[key],backgroundColor:"#7a1f2b"}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true},x:{ticks:{font:{size:9}}}}}});
+}
+async function buildEmployee(key){
+  const p=PROFILES[key],el=document.getElementById(key);
+  el.innerHTML=`<h2>${p.name}</h2>
+    <div class="profile">${p.items.map(([k,v])=>`<div class="item"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")}</div>
+    <div class="chartbox"><canvas id="ch_${key}"></canvas></div>
+    <h2>📎 Documents (Google Drive)</h2><div class="doclist" id="docs_${key}"><div class="loading">Chargement…</div></div>
+    <h2>💶 Historique des nets</h2>${netTable(key)}`;
+  makeChart(key);
+  try{
+    let files=[];
+    for(const src of p.docs){
+      const id = src.startsWith("emp:") ? F.emp[src.slice(4)] : F[src];
+      files=files.concat(await drive(`parentId = '${id}'`));
+    }
+    const finaux=await drive(`parentId = '${F.pdfFinaux}'`);
+    files=files.concat(finaux.filter(f=>f.title.startsWith(p.buste)));
+    renderDocs(document.getElementById("docs_"+key),files.filter(f=>f.mimeType!=="application/vnd.google-apps.folder"));
+  }catch(e){document.getElementById("docs_"+key).innerHTML=`<div class="err">Connecteur Google Drive indisponible (${e.message}). Recharge la vue.</div>`}
+}
+function buildOverview(){
+  const keys=["fedro","richard","francesco","margot","mija"];
+  let head=`<tr><th>Mois</th>${keys.map(k=>`<th class="num">${k[0].toUpperCase()+k.slice(1)}</th>`).join("")}<th class="num">Total</th></tr>`;
+  let rows=MONTHS.map((m,i)=>{
+    let tot=0,cells=keys.map(k=>{const v=NETS[k][i];tot+=v||0;return `<td class="num">${v==null?"—":v.toLocaleString("fr-FR")}</td>`}).join("");
+    return `<tr><td>${m}</td>${cells}<td class="num"><b>${tot.toLocaleString("fr-FR",{maximumFractionDigits:0})}</b></td></tr>`;
+  }).join("");
+  document.getElementById("ovTable").innerHTML=`<table>${head}${rows}</table>`;
+}
+async function buildPaghe(){
+  const el=document.getElementById("pagheList");
+  try{
+    const folders=(await drive(`parentId = '${F.paghe}'`)).filter(f=>f.mimeType==="application/vnd.google-apps.folder").sort((a,b)=>b.title.localeCompare(a.title));
+    el.innerHTML=folders.map((f,i)=>`<div class="folderhead" data-i="${i}" data-id="${f.id}">📁 ${f.title}</div><div class="folderbody" id="fb_${i}"><div class="loading">…</div></div>`).join("");
+    el.querySelectorAll(".folderhead").forEach(h=>{
+      h.addEventListener("click",async()=>{
+        const body=document.getElementById("fb_"+h.dataset.i);
+        body.classList.toggle("open");
+        if(body.dataset.loaded)return;
+        body.dataset.loaded=1;
+        try{renderDocs(body,await drive(`parentId = '${h.dataset.id}'`));}
+        catch(e){body.innerHTML=`<div class="err">${e.message}</div>`}
+      });
+    });
+  }catch(e){el.innerHTML=`<div class="err">Connecteur Google Drive indisponible (${e.message})</div>`}
+}
+async function buildF24(){
+  try{renderDocs(document.getElementById("f24List"),(await drive(`parentId = '${F.f24}'`)).reverse());}catch(e){document.getElementById("f24List").innerHTML=`<div class="err">${e.message}</div>`}
+  try{renderDocs(document.getElementById("profList"),await drive(`parentId = '${F.proforma}'`));}catch(e){document.getElementById("profList").innerHTML=`<div class="err">${e.message}</div>`}
+  try{
+    const ann=(await drive(`parentId = '${F.annuels}'`)).concat(await drive(`parentId = '${F.inail}'`));
+    renderDocs(document.getElementById("annList"),ann);
+  }catch(e){document.getElementById("annList").innerHTML=`<div class="err">${e.message}</div>`}
+}
+// tabs
+const built={};
+function show(t){
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.t===t));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.toggle("active",x.id===t));
+  try{localStorage.setItem("rsvp_tab",t)}catch(e){}
+  if(built[t])return; built[t]=1;
+  if(PROFILES[t])buildEmployee(t);
+  else if(t==="paghe")buildPaghe();
+  else if(t==="f24")buildF24();
+  else if(t==="overview")buildOverview();
+}
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>show(t.dataset.t)));
+let start="overview";try{start=localStorage.getItem("rsvp_tab")||"overview"}catch(e){}
+show(start);
+</script>
+</body>
+</html>

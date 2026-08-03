@@ -139,6 +139,7 @@
       <div class="navgroup" data-grp="ops"><button class="navhead" onclick="toggleGrp('ops')">Opérations<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="projets">Projets</a>
         <a class="nav" data-view="taches">Tâches</a>
+        <a class="nav" data-view="rh">RH / Employés</a>
       </div></div>
       <div class="navgroup" data-grp="fin"><button class="navhead" onclick="toggleGrp('fin')">Finances<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="finances">Finances</a>
@@ -346,6 +347,7 @@ function render(){
   if(view==='pipeline')return renderPipeline();
   if(view==='projets')return renderProjets();
   if(view==='taches')return renderTaches();
+  if(view==='rh')return renderRH();
   if(view==='finances')return renderFinances();
   if(view==='treso')return renderTreso();
   if(view==='immobilier')return renderImmobilier();
@@ -1076,6 +1078,7 @@ function renderImmobilier(){
 }
 function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
 function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
+function renderRH(){el('content').innerHTML=frame('rsvp-hr.html');}
 
 /* AGENDA — vrai calendrier (FullCalendar) */
 let _cal=null;
@@ -1183,12 +1186,12 @@ async function renderCockpit(){
 }
 
 async function renderRsvp(){
-  const M={contacts:['👤','Contacts'],orgs:['🏢','Organisations'],pipeline:['📈','Pipeline'],projets:['🎯','Projets'],taches:['✅','Tâches'],finances:['💶','Finances'],treso:['💰','Trésorerie'],contenu:['🎬','Contenu'],pilotage:['📊','Pilotage'],emailing:['📣','Emailing']};
+  const M={contacts:['👤','Contacts'],orgs:['🏢','Organisations'],pipeline:['📈','Pipeline'],projets:['🎯','Projets'],taches:['✅','Tâches'],rh:['👥','RH / Employés'],finances:['💶','Finances'],treso:['💰','Trésorerie'],contenu:['🎬','Contenu'],pilotage:['📊','Pilotage'],emailing:['📣','Emailing']};
   const tiles=(keys,col)=>keys.map(function(k){return moduleTile(k,M[k][0],M[k][1],col);}).join('');
   el('content').innerHTML=pageHead('🍷','RSVP','CRM · Ventes · Opérations · Finances · Marketing')+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px">'+
       famPanel('🤝','CRM & Ventes','var(--rsvp)',tiles(['contacts','orgs','pipeline'],'var(--rsvp)'))+
-      famPanel('⚙️','Opérations','var(--immobilier)',tiles(['projets','taches'],'var(--immobilier)'))+
+      famPanel('⚙️','Opérations','var(--immobilier)',tiles(['projets','taches','rh'],'var(--immobilier)'))+
       famPanel('💶','Finances','var(--warn)',tiles(['finances','treso'],'var(--warn)'))+
       famPanel('📣','Marketing','var(--nws)',tiles(['contenu','pilotage','emailing'],'var(--nws)'))+
     '</div>';
