@@ -127,6 +127,7 @@
       <div class="brand">HUB <small>· Nico</small></div>
       <div class="navgroup open" data-grp="accueil"><button class="navhead" onclick="toggleGrp('accueil')">Accueil<span class="chev">›</span></button><div class="navitems">
         <a class="nav active" data-view="cockpit">Cockpit</a>
+        <a class="nav" data-view="calendrier">Calendrier</a>
         <a class="nav" data-view="agenda">Agenda</a>
       </div></div>
       <div class="navgroup" data-grp="crm"><button class="navhead" onclick="toggleGrp('crm')">CRM &amp; Ventes<span class="chev">›</span></button><div class="navitems">
@@ -189,6 +190,9 @@ const ROLE_LABEL = {client:'Client',prospect:'Prospect',fournisseur:'Fournisseur
 const STAGES = [['nouveau','Nouveau'],['qualifie','Qualifié'],['proposition','Proposition'],['negociation','Négociation'],['gagne','Gagné'],['perdu','Perdu']];
 
 let token=null, email=null, view='cockpit';
+let IS_ADMIN=true;
+const ADMIN_EMAIL='nadeau.nicolas@gmail.com';
+const EMP_VIEWS=['calendrier','rh','projets','taches','pilotage'];
 let cacheOrgs=[], cacheContacts=[];
 let filterRole=null, filterPil=null, filterSrc=null, filterReach=null, filterWa=null, search='';
 function waStatus(c){var L=c.listes||[];
@@ -247,10 +251,27 @@ function saveSession(d,em){
 }
 function enterApp(access,em){
   token=access; email=em;
+  IS_ADMIN=(em===ADMIN_EMAIL);
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('whoami').textContent=em;
+  applyRole();
   boot();
+}
+function applyRole(){
+  if(IS_ADMIN)return;
+  // Mode employé : ne montrer que les vues autorisées
+  document.querySelectorAll('.nav[data-view]').forEach(function(n){
+    if(!EMP_VIEWS.includes(n.dataset.view)) n.style.display='none';
+  });
+  document.querySelectorAll('.navgroup').forEach(function(g){
+    var vis=[].slice.call(g.querySelectorAll('.nav[data-view]')).some(function(x){return x.style.display!=='none';});
+    if(!vis) g.style.display='none';
+  });
+  // Cacher le bouton d'ajout global sauf sur projets/taches (géré aussi dans render)
+  view='calendrier';
+  var cal=document.querySelector('.nav[data-view="calendrier"]');
+  if(cal){document.querySelectorAll('.nav').forEach(function(x){x.classList.remove('active');});cal.classList.add('active');openGroupOf(cal);}
 }
 async function login(){
   const em=document.getElementById('lemail').value.trim();
@@ -266,9 +287,22 @@ async function login(){
     const d=await r.json();
     if(!r.ok) throw new Error(d.error_description||d.msg||'Identifiants invalides');
     saveSession(d,em);
+    if(d.user&&d.user.user_metadata&&d.user.user_metadata.must_reset){ await forceReset(d.access_token); }
     enterApp(d.access_token,em);
   }catch(e){ errEl.textContent=e.message; }
   document.getElementById('lbtn').textContent='Se connecter';
+}
+async function forceReset(tok){
+  var np;
+  while(true){
+    np=prompt('Première connexion — choisis ton nouveau mot de passe personnel (au moins 8 caractères) :');
+    if(np&&np.length>=8) break;
+    alert('Le mot de passe doit faire au moins 8 caractères. / La password deve avere almeno 8 caratteri.');
+  }
+  try{
+    await fetch(SUPA_URL+'/auth/v1/user',{method:'PUT',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({password:np,data:{must_reset:false}})});
+    alert('Mot de passe enregistré ✅ / Password salvata ✅');
+  }catch(e){ alert('Erreur : '+e.message); }
 }
 async function tryRefresh(sess){
   try{
@@ -330,17 +364,21 @@ document.getElementById('addbtn').onclick=()=>{
 
 /* ───── BOOT ───── */
 async function boot(){
-  try{ cacheOrgs=await sb('organisations?select=*&order=nom'); }catch(e){ cacheOrgs=[]; }
-  try{ cacheContacts=await sbAll('contacts?select=*&order=nom'); }catch(e){ cacheContacts=[]; }
+  if(IS_ADMIN){
+    try{ cacheOrgs=await sb('organisations?select=*&order=nom'); }catch(e){ cacheOrgs=[]; }
+    try{ cacheContacts=await sbAll('contacts?select=*&order=nom'); }catch(e){ cacheContacts=[]; }
+  }
   render();
 }
 
 /* ───── RENDER ───── */
-const TITLES={cockpit:'Cockpit',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda',emailing:'Emailing groupé',comms:'Communications',guide:'Mode d’emploi'};
+const TITLES={cockpit:'Cockpit',calendrier:'Calendrier',rsvp:'RSVP',perso:'Perso',nws:'NWS',contacts:'Contacts',orgs:'Organisations',pipeline:'Pipeline',projets:'Projets',taches:'Tâches',finances:'Finances',treso:'Trésorerie',immobilier:'Immobilier',contenu:'Contenu',pilotage:'Pilotage RSVP',agenda:'Agenda',emailing:'Emailing groupé',comms:'Communications',guide:'Mode d’emploi'};
 const el=id=>document.getElementById(id);
 function render(){
+  if(!IS_ADMIN && !EMP_VIEWS.includes(view)) view='calendrier';
   el('title').textContent=TITLES[view]||'HUB';
-  el('addbtn').style.display=['contacts','orgs','pipeline','projets','taches','finances'].includes(view)?'':'none';
+  el('addbtn').style.display=(IS_ADMIN&&['contacts','orgs','pipeline','projets','taches','finances'].includes(view))?'':'none';
+  if(view==='calendrier')return renderCalendrier();
   if(view==='contacts')return renderContacts();
   if(view==='orgs')return renderOrgs();
   if(view==='pipeline')return renderPipeline();
@@ -1067,7 +1105,61 @@ let immoSub='isa';
 function frame(src){return `<iframe src="./${src}" style="width:100%;height:calc(100vh - 160px);border:1px solid var(--line);border-radius:14px;background:#0f1420"></iframe>`;}
 function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
 function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
-function renderRH(){el('content').innerHTML=frame('rsvp-hr.html');}
+function renderRH(){ if(IS_ADMIN){el('content').innerHTML=frame('rsvp-hr.html');} else {renderMaFiche();} }
+async function renderMaFiche(){
+  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  let rows=[];try{rows=await sb('employes?select=name,role,fiche,nets,drive_folder_id&limit=1');}catch(e){}
+  if(!rows||!rows.length){el('content').innerHTML='<div class="empty">Aucune fiche associée à ton compte.</div>';return;}
+  const e=rows[0];
+  const items=(e.fiche||[]).map(function(p){return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 14px;background:var(--surface2)"><div style="font-size:11px;color:var(--mut2);text-transform:uppercase;letter-spacing:.04em">'+p[0]+'</div><div style="font-size:14px;margin-top:3px">'+p[1]+'</div></div>';}).join('');
+  const months=(e.nets&&e.nets.months)||[],nets=(e.nets&&e.nets.nets)||[];
+  let rws=months.map(function(m,i){var v=nets[i];return v==null?'':'<tr><td style="padding:6px 10px;border-bottom:1px solid var(--line)">'+m+'</td><td style="padding:6px 10px;border-bottom:1px solid var(--line);text-align:right">'+Number(v).toLocaleString('fr-FR')+' €</td></tr>';}).join('');
+  const tot=nets.reduce(function(a,b){return a+(b||0);},0);
+  const drive=e.drive_folder_id?'<a class="btn sm" style="margin-top:8px;display:inline-block" href="https://drive.google.com/drive/folders/'+e.drive_folder_id+'" target="_blank" rel="noopener">📎 Mes bulletins de paie (Drive)</a>':'<div style="color:var(--mut2);font-size:13px">Tes bulletins seront disponibles ici prochainement.</div>';
+  el('content').innerHTML=
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px"><span style="font-size:30px">👤</span><div><div style="font-size:23px;font-weight:800">'+e.name+'</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">'+(e.role||'')+'</div></div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:22px">'+items+'</div>'+
+    (rws?'<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">Historique des nets</h2><div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left;padding:7px 10px;background:var(--surface2)">Mois</th><th style="text-align:right;padding:7px 10px;background:var(--surface2)">Net</th></tr>'+rws+'<tr><td style="padding:7px 10px;font-weight:700">Total</td><td style="padding:7px 10px;text-align:right;font-weight:700">'+Math.round(tot).toLocaleString('fr-FR')+' €</td></tr></table></div>':'')+
+    '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">Bulletins de paie</h2>'+drive;
+}
+
+/* CALENDRIER partagé (fermetures, événements) */
+let _cal2=null;
+function _addDay(d){var dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()+1);return dt.toISOString().slice(0,10);}
+async function renderCalendrier(){
+  let evs=[];try{evs=await sb('evenements?select=*&order=date_debut.asc');}catch(e){}
+  const colors={fermeture:'#c0392b',evenement:'#2E75B6',note:'#b8942f'};
+  const events=evs.map(function(e){return {title:e.titre,start:e.date_debut,end:e.date_fin?_addDay(e.date_fin):undefined,color:colors[e.type]||'#666',extendedProps:{note:e.note||'',id:e.id}};});
+  const addBtn=IS_ADMIN?'<button class="btn sm" onclick="openEvt()">+ Ajouter</button>':'';
+  el('content').innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap">'+
+      '<div style="display:flex;align-items:center;gap:14px"><span style="font-size:30px">📅</span><div><div style="font-size:23px;font-weight:800">Calendrier</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">Fermetures, événements &amp; infos partagées</div></div></div>'+addBtn+
+    '</div>'+
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--mut2)"><span><span style="display:inline-block;width:11px;height:11px;background:#c0392b;border-radius:3px;vertical-align:middle"></span> Fermeture</span><span><span style="display:inline-block;width:11px;height:11px;background:#2E75B6;border-radius:3px;vertical-align:middle"></span> Événement</span><span><span style="display:inline-block;width:11px;height:11px;background:#b8942f;border-radius:3px;vertical-align:middle"></span> Info</span></div>'+
+    '<div id="cal2" style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px"></div>';
+  if(typeof FullCalendar==='undefined'){el('cal2').innerHTML='<div class="empty">Calendrier indisponible, recharge la page.</div>';return;}
+  _cal2=new FullCalendar.Calendar(el('cal2'),{
+    initialView:'dayGridMonth',locale:'fr',height:'auto',firstDay:1,nowIndicator:true,
+    headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,listMonth'},
+    buttonText:{today:"Aujourd'hui",month:'Mois',list:'Liste'},
+    events:events,
+    eventClick:function(info){var p=info.event.extendedProps;
+      if(IS_ADMIN){ if(confirm(info.event.title+(p.note?'\n'+p.note:'')+'\n\nSupprimer cet élément ?')) delEvt(p.id); }
+      else { alert(info.event.title+(p.note?'\n'+p.note:'')); }
+    }
+  });
+  _cal2.render();
+}
+async function openEvt(){
+  var titre=prompt('Titre (ex. « Fermeture estivale », « Dégustation Follet ») :'); if(!titre)return;
+  var type=(prompt('Type : fermeture / evenement / note','evenement')||'evenement').trim();
+  var d1=prompt('Date de début (AAAA-MM-JJ) :'); if(!d1)return;
+  var d2=prompt('Date de fin (AAAA-MM-JJ) — vide si un seul jour :','')||null;
+  var note=prompt('Note (optionnel) :','')||null;
+  try{await sb('evenements',{method:'POST',body:JSON.stringify({titre:titre,type:type,date_debut:d1,date_fin:d2,note:note})});renderCalendrier();}
+  catch(e){alert('Erreur : '+e.message);}
+}
+async function delEvt(id){try{await sb('evenements?id=eq.'+id,{method:'DELETE'});renderCalendrier();}catch(e){alert('Erreur : '+e.message);}}
 
 /* AGENDA — vrai calendrier (FullCalendar) */
 let _cal=null;
