@@ -613,7 +613,7 @@ function renderGuide(){
      'Onglet '+b('Comms')+' : compteurs '+b('envoyés / reçus / contacts touchés / taux de réponse')+', et le fil d’activité de toutes tes conversations. Le bouton '+b('🔄 Actualiser')+' recharge la vue.')+
 
    sec('💶','Finances, Trésorerie & le reste',
-     'Les modules '+b('Finances')+' et '+b('Trésorerie')+' suivent ta compta et ta trajectoire de cash. '+b('Immobilier')+' (simulateur ISA + Edolo), '+b('Contenu')+' (suivi vidéos Vinothèque) et '+b('Pilotage')+' sont tes tableaux de bord dédiés. '+b('Tâches')+' = ton Kanban.')+
+     'Les modules '+b('Finances')+' et '+b('Trésorerie')+' suivent ta compta et ta trajectoire de cash. '+b('Immobilier')+' (simulateur ISA), '+b('Contenu')+' (suivi vidéos Vinothèque) et '+b('Pilotage')+' sont tes tableaux de bord dédiés. '+b('Tâches')+' = ton Kanban.')+
 
    sec('🤖','Pousser de l’info via Claude',
      'Le plus puissant : tu n’as pas à tout saisir à la main. Dis à Claude, en langage normal — «&nbsp;'+b('ajoute cette dépense')+'&nbsp;», «&nbsp;'+b('mets à jour le CA')+'&nbsp;», «&nbsp;'+b('importe ces contacts')+'&nbsp;», «&nbsp;'+b('retrouve mes échanges avec X')+'&nbsp;» — et ça se met à jour dans le HUB.')+
@@ -1071,12 +1071,8 @@ async function saveTreso(){
 let immoSub='isa';
 function frame(src){return `<iframe src="./${src}" style="width:100%;height:calc(100vh - 160px);border:1px solid var(--line);border-radius:14px;background:#0f1420"></iframe>`;}
 function renderImmobilier(){
-  el('content').innerHTML=`<div class="toolbar">
-    <span class="chip ${immoSub==='isa'?'on':''}" id="im_isa">Simulateur ISA</span>
-    <span class="chip ${immoSub==='edolo'?'on':''}" id="im_edolo">Rénovation Edolo</span>
-  </div>`+frame(immoSub==='isa'?'immobilier-isa.html':'edolo.html');
-  el('im_isa').onclick=()=>{immoSub='isa';renderImmobilier();};
-  el('im_edolo').onclick=()=>{immoSub='edolo';renderImmobilier();};
+  el('content').innerHTML=frame('immobilier-isa.html');
+  return;
 }
 function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
 function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
