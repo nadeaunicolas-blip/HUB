@@ -116,6 +116,7 @@
     <div class="field"><label>Mot de passe</label><input id="lpass" name="password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
     <button class="btn" id="lbtn" type="submit">Se connecter</button>
     <div class="err" id="lerr"></div>
+    <button type="button" class="btn sm sec" onclick="toggleLang()" style="margin-top:10px;width:100%">Italiano ⇄ Français</button>
   </form>
 </div>
 
@@ -166,6 +167,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <span class="u" id="whoami"></span>
+          <button class="btn sm sec" id="langbtn" onclick="toggleLang()" title="Langue / Lingua">IT</button>
           <button class="btn sm" id="addbtn">+ Nouveau</button>
         </div>
       </div>
@@ -193,6 +195,37 @@ let token=null, email=null, view='cockpit';
 let IS_ADMIN=true;
 const ADMIN_EMAIL='nadeau.nicolas@gmail.com';
 const EMP_VIEWS=['calendrier','rh','projets','taches','pilotage'];
+let LANG='fr';
+const I18N={
+ nav:{cockpit:['Cockpit','Cockpit'],calendrier:['Calendrier','Calendario'],agenda:['Agenda','Agenda'],contacts:['Contacts','Contatti'],orgs:['Organisations','Organizzazioni'],pipeline:['Pipeline','Pipeline'],emailing:['Emailing','Emailing'],comms:['Comms','Comms'],projets:['Projets','Progetti'],taches:['Tâches','Attività'],rh:['HR / Employés','La mia scheda'],finances:['Finances','Finanze'],treso:['Trésorerie','Tesoreria'],pilotage:['Pilotage','Pilotage'],contenu:['Contenu','Contenuti'],guide:['Guide','Guida']},
+ grp:{accueil:['Accueil','Home'],crm:['CRM & Ventes','CRM & Vendite'],ops:['Opérations','Operazioni'],hr:['HR','Risorse Umane'],fin:['Finances','Finanze'],mkt:['Marketing','Marketing'],aide:['Aide','Aiuto']},
+ s:{
+  'Fermetures, événements & infos partagées':'Chiusure, eventi e info condivise',
+  'Fermeture':'Chiusura','Événement':'Evento','Info':'Info','+ Ajouter':'+ Aggiungi',
+  'Calendrier indisponible, recharge la page.':'Calendario non disponibile, ricarica la pagina.',
+  'Chargement…':'Caricamento…',
+  'Aucune fiche associée à ton compte.':'Nessuna scheda associata al tuo account.',
+  'Historique des nets':'Storico dei netti','Mois':'Mese','Net':'Netto','Total':'Totale',
+  'Bulletins de paie':'Buste paga','Mes bulletins de paie (Drive)':'Le mie buste paga (Drive)',
+  'Tes bulletins seront disponibles ici prochainement.':'Le tue buste paga saranno presto disponibili qui.',
+  'Mes tâches':'Le mie attività',
+  "Les tâches qui te sont assignées — coche quand c'est fait":'Le attività assegnate a te — spunta quando è fatto',
+  'Aucune tâche assignée pour le moment.':'Nessuna attività assegnata al momento.',
+  'en retard':'in ritardo'
+ }
+};
+function T(fr){ return (LANG==='it' && I18N.s[fr]!==undefined) ? I18N.s[fr] : fr; }
+function applyLang(){
+  var i=(LANG==='it')?1:0;
+  document.querySelectorAll('.nav[data-view]').forEach(function(n){var m=I18N.nav[n.dataset.view];if(m)n.textContent=m[i];});
+  document.querySelectorAll('.navgroup').forEach(function(g){var m=I18N.grp[g.getAttribute('data-grp')],h=g.querySelector('.navhead'),c=h?h.querySelector('.chev'):null;if(m&&h&&h.childNodes[0]){h.childNodes[0].nodeValue=m[i];}});
+  var lo=document.getElementById('logout'); if(lo&&lo.lastChild)lo.lastChild.nodeValue=(LANG==='it'?' Esci':' Déconnexion');
+  var tb=document.getElementById('langbtn'); if(tb)tb.textContent=(LANG==='it'?'FR':'IT');
+  var lb=document.getElementById('lbtn'); if(lb)lb.textContent=(LANG==='it'?'Accedi':'Se connecter');
+  var flds=document.querySelectorAll('#login .field label');
+  if(flds[1])flds[1].textContent=(LANG==='it'?'Password':'Mot de passe');
+}
+function toggleLang(){ LANG=(LANG==='it'?'fr':'it'); try{localStorage.setItem('hub_lang',LANG);}catch(e){} applyLang(); if(document.getElementById('app').style.display!=='none')render(); }
 let cacheOrgs=[], cacheContacts=[];
 let filterRole=null, filterPil=null, filterSrc=null, filterReach=null, filterWa=null, search='';
 function waStatus(c){var L=c.listes||[];
@@ -256,6 +289,8 @@ function enterApp(access,em){
   document.getElementById('app').style.display='block';
   document.getElementById('whoami').textContent=em;
   applyRole();
+  try{ LANG=localStorage.getItem('hub_lang') || (IS_ADMIN?'fr':'it'); }catch(e){ LANG=IS_ADMIN?'fr':'it'; }
+  applyLang();
   boot();
 }
 function applyRole(){
@@ -329,6 +364,8 @@ document.getElementById('logout').onclick=()=>{try{localStorage.removeItem('hub_
     const fresh=await tryRefresh(sess); if(fresh)enterApp(fresh,sess.email);
   }catch(e){}
 })();
+try{ LANG=localStorage.getItem('hub_lang')||'fr'; }catch(e){}
+applyLang();
 
 /* ───── NAV ───── */
 function toggleGrp(id){
@@ -376,7 +413,7 @@ const TITLES={cockpit:'Cockpit',calendrier:'Calendrier',rsvp:'RSVP',perso:'Perso
 const el=id=>document.getElementById(id);
 function render(){
   if(!IS_ADMIN && !EMP_VIEWS.includes(view)) view='calendrier';
-  el('title').textContent=TITLES[view]||'HUB';
+  el('title').textContent=(LANG==='it'&&I18N.nav[view])?I18N.nav[view][1]:(TITLES[view]||'HUB');
   el('addbtn').style.display=(IS_ADMIN&&['contacts','orgs','pipeline','projets','taches','finances'].includes(view))?'':'none';
   if(view==='calendrier')return renderCalendrier();
   if(view==='contacts')return renderContacts();
@@ -928,10 +965,10 @@ let tFilter='ouvertes';
 const KCOLS=[['a_faire','À faire'],['en_cours','En cours'],['fait','Fait']];
 let tPil=null;
 async function renderMesTaches(){
-  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  el('content').innerHTML='<div class="empty">'+T('Chargement…')+'</div>';
   let ts=[];try{ts=await sb('taches?select=*&order=echeance.asc.nullslast');}catch(e){}
-  const head='<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px"><span style="font-size:30px">✅</span><div><div style="font-size:23px;font-weight:800">Mes tâches</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">Les tâches qui te sont assignées — coche quand c\'est fait</div></div></div>';
-  if(!ts.length){el('content').innerHTML=head+'<div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:40px 20px;text-align:center;color:var(--mut2)">Aucune tâche assignée pour le moment.</div>';return;}
+  const head='<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px"><span style="font-size:30px">✅</span><div><div style="font-size:23px;font-weight:800">'+T('Mes tâches')+'</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">'+T("Les tâches qui te sont assignées — coche quand c'est fait")+'</div></div></div>';
+  if(!ts.length){el('content').innerHTML=head+'<div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:40px 20px;text-align:center;color:var(--mut2)">'+T('Aucune tâche assignée pour le moment.')+'</div>';return;}
   const today=new Date();today.setHours(0,0,0,0);
   const rows=ts.map(function(t){
     var done=t.statut==='fait';
@@ -940,7 +977,7 @@ async function renderMesTaches(){
     return '<div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--surface2);border:1px solid '+(late?'#c0392b55':'var(--line)')+';border-radius:12px;margin-bottom:8px">'+
       '<input type="checkbox" '+(done?'checked':'')+' onchange="toggleMaTache(\''+t.id+'\',this.checked)" style="width:20px;height:20px;flex:0 0 auto;cursor:pointer">'+
       '<div style="flex:1"><div style="font-weight:600;font-size:14px;'+(done?'text-decoration:line-through;color:var(--mut2)':'')+'">'+(t.titre||'—')+'</div>'+
-      (ech?'<div style="font-size:11.5px;color:'+(late?'#e06':'var(--mut2)')+';margin-top:2px">'+ech+(late?' · en retard':'')+'</div>':'')+'</div></div>';
+      (ech?'<div style="font-size:11.5px;color:'+(late?'#e06':'var(--mut2)')+';margin-top:2px">'+ech+(late?' · '+T('en retard'):'')+'</div>':'')+'</div></div>';
   }).join('');
   el('content').innerHTML=head+rows;
 }
@@ -1130,20 +1167,20 @@ function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
 function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
 function renderRH(){ if(IS_ADMIN){el('content').innerHTML=frame('rsvp-hr.html');} else {renderMaFiche();} }
 async function renderMaFiche(){
-  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  el('content').innerHTML='<div class="empty">'+T('Chargement…')+'</div>';
   let rows=[];try{rows=await sb('employes?select=name,role,fiche,nets,drive_folder_id&limit=1');}catch(e){}
-  if(!rows||!rows.length){el('content').innerHTML='<div class="empty">Aucune fiche associée à ton compte.</div>';return;}
+  if(!rows||!rows.length){el('content').innerHTML='<div class="empty">'+T('Aucune fiche associée à ton compte.')+'</div>';return;}
   const e=rows[0];
   const items=(e.fiche||[]).map(function(p){return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 14px;background:var(--surface2)"><div style="font-size:11px;color:var(--mut2);text-transform:uppercase;letter-spacing:.04em">'+p[0]+'</div><div style="font-size:14px;margin-top:3px">'+p[1]+'</div></div>';}).join('');
   const months=(e.nets&&e.nets.months)||[],nets=(e.nets&&e.nets.nets)||[];
   let rws=months.map(function(m,i){var v=nets[i];return v==null?'':'<tr><td style="padding:6px 10px;border-bottom:1px solid var(--line)">'+m+'</td><td style="padding:6px 10px;border-bottom:1px solid var(--line);text-align:right">'+Number(v).toLocaleString('fr-FR')+' €</td></tr>';}).join('');
   const tot=nets.reduce(function(a,b){return a+(b||0);},0);
-  const drive=e.drive_folder_id?'<a class="btn sm" style="margin-top:8px;display:inline-block" href="https://drive.google.com/drive/folders/'+e.drive_folder_id+'" target="_blank" rel="noopener">📎 Mes bulletins de paie (Drive)</a>':'<div style="color:var(--mut2);font-size:13px">Tes bulletins seront disponibles ici prochainement.</div>';
+  const drive=e.drive_folder_id?'<a class="btn sm" style="margin-top:8px;display:inline-block" href="https://drive.google.com/drive/folders/'+e.drive_folder_id+'" target="_blank" rel="noopener">📎 '+T('Mes bulletins de paie (Drive)')+'</a>':'<div style="color:var(--mut2);font-size:13px">'+T('Tes bulletins seront disponibles ici prochainement.')+'</div>';
   el('content').innerHTML=
     '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px"><span style="font-size:30px">👤</span><div><div style="font-size:23px;font-weight:800">'+e.name+'</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">'+(e.role||'')+'</div></div></div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:22px">'+items+'</div>'+
-    (rws?'<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">Historique des nets</h2><div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left;padding:7px 10px;background:var(--surface2)">Mois</th><th style="text-align:right;padding:7px 10px;background:var(--surface2)">Net</th></tr>'+rws+'<tr><td style="padding:7px 10px;font-weight:700">Total</td><td style="padding:7px 10px;text-align:right;font-weight:700">'+Math.round(tot).toLocaleString('fr-FR')+' €</td></tr></table></div>':'')+
-    '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">Bulletins de paie</h2>'+drive;
+    (rws?'<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">'+T('Historique des nets')+'</h2><div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left;padding:7px 10px;background:var(--surface2)">'+T('Mois')+'</th><th style="text-align:right;padding:7px 10px;background:var(--surface2)">'+T('Net')+'</th></tr>'+rws+'<tr><td style="padding:7px 10px;font-weight:700">'+T('Total')+'</td><td style="padding:7px 10px;text-align:right;font-weight:700">'+Math.round(tot).toLocaleString('fr-FR')+' €</td></tr></table></div>':'')+
+    '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">'+T('Bulletins de paie')+'</h2>'+drive;
 }
 
 /* CALENDRIER partagé (fermetures, événements) */
@@ -1153,19 +1190,19 @@ async function renderCalendrier(){
   let evs=[];try{evs=await sb('evenements?select=*&order=date_debut.asc');}catch(e){}
   const colors={fermeture:'#c0392b',evenement:'#2E75B6',note:'#b8942f'};
   const events=evs.map(function(e){return {title:e.titre,start:e.date_debut,end:e.date_fin?_addDay(e.date_fin):undefined,color:colors[e.type]||'#666',extendedProps:{note:e.note||'',id:e.id}};});
-  const addBtn=IS_ADMIN?'<button class="btn sm" onclick="openEvt()">+ Ajouter</button>':'';
+  const addBtn=IS_ADMIN?'<button class="btn sm" onclick="openEvt()">'+T('+ Ajouter')+'</button>':'';
   el('content').innerHTML=
     '<div style="border-radius:16px;overflow:hidden;margin-bottom:16px;line-height:0;box-shadow:0 4px 16px rgba(0,0,0,.25)"><img src="./hero-rando.jpg" style="width:100%;display:block;max-height:300px;object-fit:cover;object-position:center 55%"></div>'+
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">'+
-      '<div style="font-size:19px;font-weight:800">📅 Calendrier</div>'+addBtn+
+      '<div style="font-size:19px;font-weight:800">📅 '+(LANG==='it'?'Calendario':'Calendrier')+'</div>'+addBtn+
     '</div>'+
-    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--mut2)"><span><span style="display:inline-block;width:11px;height:11px;background:#c0392b;border-radius:3px;vertical-align:middle"></span> Fermeture</span><span><span style="display:inline-block;width:11px;height:11px;background:#2E75B6;border-radius:3px;vertical-align:middle"></span> Événement</span><span><span style="display:inline-block;width:11px;height:11px;background:#b8942f;border-radius:3px;vertical-align:middle"></span> Info</span></div>'+
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--mut2)"><span><span style="display:inline-block;width:11px;height:11px;background:#c0392b;border-radius:3px;vertical-align:middle"></span> '+T('Fermeture')+'</span><span><span style="display:inline-block;width:11px;height:11px;background:#2E75B6;border-radius:3px;vertical-align:middle"></span> '+T('Événement')+'</span><span><span style="display:inline-block;width:11px;height:11px;background:#b8942f;border-radius:3px;vertical-align:middle"></span> '+T('Info')+'</span></div>'+
     '<div id="cal2" style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px"></div>';
-  if(typeof FullCalendar==='undefined'){el('cal2').innerHTML='<div class="empty">Calendrier indisponible, recharge la page.</div>';return;}
+  if(typeof FullCalendar==='undefined'){el('cal2').innerHTML='<div class="empty">'+T('Calendrier indisponible, recharge la page.')+'</div>';return;}
   _cal2=new FullCalendar.Calendar(el('cal2'),{
-    initialView:'dayGridMonth',locale:'fr',height:'auto',firstDay:1,nowIndicator:true,
+    initialView:'dayGridMonth',locale:(LANG==='it'?'it':'fr'),height:'auto',firstDay:1,nowIndicator:true,
     headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,listMonth'},
-    buttonText:{today:"Aujourd'hui",month:'Mois',list:'Liste'},
+    buttonText:(LANG==='it'?{today:'Oggi',month:'Mese',list:'Elenco'}:{today:"Aujourd'hui",month:'Mois',list:'Liste'}),
     events:events,
     eventClick:function(info){var p=info.event.extendedProps;
       if(IS_ADMIN){ if(confirm(info.event.title+(p.note?'\n'+p.note:'')+'\n\nSupprimer cet élément ?')) delEvt(p.id); }
