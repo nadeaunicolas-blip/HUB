@@ -146,10 +146,10 @@
       <div class="navgroup" data-grp="fin"><button class="navhead" onclick="toggleGrp('fin')">Finances<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="finances">Finances</a>
         <a class="nav" data-view="treso">Trésorerie</a>
+        <a class="nav" data-view="pilotage">Pilotage</a>
       </div></div>
       <div class="navgroup" data-grp="mkt"><button class="navhead" onclick="toggleGrp('mkt')">Marketing<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="contenu">Contenu</a>
-        <a class="nav" data-view="pilotage">Pilotage</a>
       </div></div>
       <div class="navgroup" data-grp="perso"><button class="navhead" onclick="toggleGrp('perso')">Perso<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="immobilier">Immobilier</a>
@@ -1195,8 +1195,8 @@ async function renderRsvp(){
       famPanel('🤝','CRM & Ventes','var(--rsvp)',tiles(['contacts','orgs','pipeline'],'var(--rsvp)'))+
       famPanel('⚙️','Opérations','var(--immobilier)',tiles(['projets','taches'],'var(--immobilier)'))+
       famPanel('👥','HR','var(--rsvp)',tiles(['rh'],'var(--rsvp)'))+
-      famPanel('💶','Finances','var(--warn)',tiles(['finances','treso'],'var(--warn)'))+
-      famPanel('📣','Marketing','var(--nws)',tiles(['contenu','pilotage','emailing'],'var(--nws)'))+
+      famPanel('💶','Finances','var(--warn)',tiles(['finances','treso','pilotage'],'var(--warn)'))+
+      famPanel('📣','Marketing','var(--nws)',tiles(['contenu','emailing'],'var(--nws)'))+
     '</div>';
 }
 
