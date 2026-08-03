@@ -134,38 +134,10 @@ const F = { // folder ids
   inail:"1cL9fe5gZUtyOIFdw6JSDUiQIg2968ynG"
 };
 const MONTHS=["05/25","06/25","07/25","14ma 25","08/25","09/25","10/25","11/25","12/25","13ma 25","01/26","02/26","03/26","04/26","05/26","06/26","07/26","14ma 26"];
-const NETS={
-  fedro:[1221,1235,1244,163,1282,1236,1244,1282,1283,650,1214,1363,1533,1523,1576,1561,1571,1256],
-  richard:[1571,1561,1571,211,1620,1563,1571,179,1506,783,1528,1501,1547,1538,1647,1490,1555,1357],
-  francesco:[588,602,602,78,602,601,602,625,756,315,602,602,598,575,598,611,611,529],
-  margot:[650,650,710,null,500,620,875,865,177.8,96.19,null,null,null,null,null,null,null,null],
-  mija:[null,null,null,null,null,null,null,167,500,null,500,500,950,625,790,550,500,null]
-};
-const PROFILES={
-  fedro:{name:"Fedro Manca — Manager",items:[
-    ["Contrat","CDI Impiegato 3° liv. (CCNL Turismo)"],["Assunzione (CB)","01/05/2025 · chez RSVP dep. 2022"],
-    ["Horaire","Full-time 40h dep. avr. 2026 · repos jeu-ven"],["Brut (06/26)","1 804,09 €/mois"],
-    ["Soldes 30/06/26","Ferie 68,87h (AP −24) · ROL 48,97h"],["TFR","814,63 € + quota 2026 694,75 €"]],
-    docs:["emp:fedro","contratsFedro"],buste:"Buste_Fedro_Manca"},
-  richard:{name:"Richard Fiocchi — Salle",items:[
-    ["Contrat","Apprendistato liv. 4 (85% dep. mai 2026)"],["Assunzione","01/05/2025 (tirocinio 2024-25 avant)"],
-    ["Horaire","Full-time ~168h/mois"],["Brut (06/26)","~1 750 €/mois"],
-    ["Soldes 30/06/26","Ferie 32h (AP −17,33) · ROL 52h · re-crédit 3 j en cours"],["TFR","1 014,60 € + 783 €"]],
-    docs:["emp:richard"],buste:"Buste_Richard_Fiocchi"},
-  francesco:{name:"Francesco Longhi — Communication / Salle",items:[
-    ["Contrat","CDI part-time 37,5% · 4° liv."],["Assunzione (CB)","01/05/2025 · chez RSVP dep. 2023"],
-    ["Horaire","≈15 h/sem (60 h/mois payées) ⚠️ ~80 h réelles"],["Brut (06/26)","636,15 €/mois"],
-    ["Soldes 30/06/26","Ferie 33h (+25 AP) · ROL 19,5h"],["TFR","382,88 € + 260,34 €"]],
-    docs:["emp:francesco"],buste:"Buste_Francesco_Longhi"},
-  margot:{name:"Margot Retif de Turckheim — A chiamata",items:[
-    ["Contrat","Lavoro intermittente dep. 21/11/2025 · 10 € net/h"],["Avant","Tirocinio 09/05 → 21/11/2025"],
-    ["Statut","Dormant — 0 chiamata en 2026"],["Obligation","Comunicazione preventiva avant chaque prestation"]],
-    docs:["emp:margot","tiroMargot"],buste:"Buste_Margot"},
-  mija:{name:"Mija Di Marco — Tirocinante",items:[
-    ["Contrat","Tirocinio extracurr. dep. 21/11/2025"],["Proroga","19/05/2026 (TFO-25-LOM-306314)"],
-    ["Indemnité","500 €/mois min. + extras"],["Tuteurs","Fedro / Nicolas"]],
-    docs:["emp:mija","tiroMija"],buste:"Buste_Mija"}
-};
+const NETS={};   // chargé depuis Supabase (table employes) après auth — plus de données en dur
+const PROFILES={};   // chargé depuis Supabase après auth
+// Dossiers Drive par employé (IDs non sensibles ; le contenu reste protégé par Google Drive)
+const DOCS={fedro:["emp:fedro","contratsFedro"],richard:["emp:richard"],francesco:["emp:francesco"],margot:["emp:margot","tiroMargot"],mija:["emp:mija","tiroMija"]};
 const cache={};
 async function drive(q){
   if(cache[q]) return cache[q];
@@ -186,8 +158,9 @@ function renderDocs(el,files){
   el.innerHTML = files.length? files.sort((a,b)=>a.title.localeCompare(b.title)).map(docRow).join("") : '<div class="loading">Aucun document</div>';
 }
 function netTable(key){
-  let rows=MONTHS.map((m,i)=>{const v=NETS[key][i];return v==null?"":`<tr><td>${m}</td><td class="num">${v.toLocaleString("fr-FR")} €</td></tr>`}).join("");
-  const tot=NETS[key].reduce((a,b)=>a+(b||0),0);
+  const arr=NETS[key]||[];
+  let rows=MONTHS.map((m,i)=>{const v=arr[i];return v==null?"":`<tr><td>${m}</td><td class="num">${v.toLocaleString("fr-FR")} €</td></tr>`}).join("");
+  const tot=arr.reduce((a,b)=>a+(b||0),0);
   return `<table><tr><th>Mois</th><th class="num">Net versé</th></tr>${rows}<tr><td><b>Total</b></td><td class="num"><b>${tot.toLocaleString("fr-FR",{maximumFractionDigits:0})} €</b></td></tr></table>`;
 }
 const charts={};
@@ -196,7 +169,7 @@ function makeChart(key){
   const ctx=document.getElementById("ch_"+key);
   if(!ctx||!window.Chart)return;
   charts[key]=new Chart(ctx,{type:"bar",
-    data:{labels:MONTHS,datasets:[{label:"Net €",data:NETS[key],backgroundColor:"#7a1f2b"}]},
+    data:{labels:MONTHS,datasets:[{label:"Net €",data:NETS[key]||[],backgroundColor:"#7a1f2b"}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{y:{beginAtZero:true},x:{ticks:{font:{size:9}}}}}});
 }
@@ -210,7 +183,7 @@ async function buildEmployee(key){
   makeChart(key);
   try{
     let files=[];
-    for(const src of p.docs){
+    for(const src of (DOCS[key]||[])){
       const id = src.startsWith("emp:") ? F.emp[src.slice(4)] : F[src];
       files=files.concat(await drive(`parentId = '${id}'`));
     }
@@ -223,7 +196,7 @@ function buildOverview(){
   const keys=["fedro","richard","francesco","margot","mija"];
   let head=`<tr><th>Mois</th>${keys.map(k=>`<th class="num">${k[0].toUpperCase()+k.slice(1)}</th>`).join("")}<th class="num">Total</th></tr>`;
   let rows=MONTHS.map((m,i)=>{
-    let tot=0,cells=keys.map(k=>{const v=NETS[k][i];tot+=v||0;return `<td class="num">${v==null?"—":v.toLocaleString("fr-FR")}</td>`}).join("");
+    let tot=0,cells=keys.map(k=>{const v=(NETS[k]||[])[i];tot+=v||0;return `<td class="num">${v==null?"—":v.toLocaleString("fr-FR")}</td>`}).join("");
     return `<tr><td>${m}</td>${cells}<td class="num"><b>${tot.toLocaleString("fr-FR",{maximumFractionDigits:0})}</b></td></tr>`;
   }).join("");
   document.getElementById("ovTable").innerHTML=`<table>${head}${rows}</table>`;
@@ -265,9 +238,33 @@ function show(t){
   else if(t==="f24")buildF24();
   else if(t==="overview")buildOverview();
 }
-document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>show(t.dataset.t)));
-let start="overview";try{start=localStorage.getItem("rsvp_tab")||"overview"}catch(e){}
-show(start);
+const SB_URL="https://rdursbdlxaxrwafyyqwv.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkdXJzYmRseGF4cndhZnl5cXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDc4NzQsImV4cCI6MjEwMDcyMzg3NH0.4wxwNnPbWsp_KVgH7GanEpKxKpg7imxyuvkDoB2UJiY";
+async function loadEmployes(){
+  let tok=null; try{const s=JSON.parse(localStorage.getItem("hub_session")||"null"); tok=s&&s.access_token;}catch(e){}
+  if(!tok) throw new Error("session HUB introuvable");
+  const r=await fetch(SB_URL+"/rest/v1/employes?select=emp_key,name,role,fiche,nets,buste_prefix&order=emp_key",{headers:{apikey:SB_KEY,Authorization:"Bearer "+tok}});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const rows=await r.json();
+  if(!rows.length) throw new Error("aucune donnée (accès non autorisé)");
+  rows.forEach(e=>{
+    NETS[e.emp_key]=(e.nets&&e.nets.nets)||[];
+    PROFILES[e.emp_key]={name:e.name+(e.role?" — "+e.role:""),items:e.fiche||[],buste:e.buste_prefix};
+  });
+}
+(async()=>{
+  try{ await loadEmployes(); }
+  catch(err){
+    document.body.innerHTML='<div style="padding:44px 28px;font-family:system-ui,Arial;color:#7a1f2b;max-width:560px;margin:0 auto">'
+      +'<h2 style="margin:0 0 8px">Accès réservé</h2>'
+      +'<div style="color:#555;font-size:14px;line-height:1.5">Cette page RH se charge depuis le HUB une fois connecté. '
+      +'Ouvre-la depuis le HUB (onglet HR / Employés). <span style="color:#999">('+err.message+')</span></div></div>';
+    return;
+  }
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>show(t.dataset.t)));
+  let start="overview";try{start=localStorage.getItem("rsvp_tab")||"overview"}catch(e){}
+  show(start);
+})();
 </script>
 </body>
 </html>
