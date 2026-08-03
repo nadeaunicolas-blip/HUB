@@ -927,7 +927,30 @@ const PRIO_COLOR={p1:'var(--crit)',p2:'var(--warn)',p3:'var(--rsvp)',p4:'var(--m
 let tFilter='ouvertes';
 const KCOLS=[['a_faire','À faire'],['en_cours','En cours'],['fait','Fait']];
 let tPil=null;
+async function renderMesTaches(){
+  el('content').innerHTML='<div class="empty">Chargement…</div>';
+  let ts=[];try{ts=await sb('taches?select=*&order=echeance.asc.nullslast');}catch(e){}
+  const head='<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px"><span style="font-size:30px">✅</span><div><div style="font-size:23px;font-weight:800">Mes tâches</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">Les tâches qui te sont assignées — coche quand c\'est fait</div></div></div>';
+  if(!ts.length){el('content').innerHTML=head+'<div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:40px 20px;text-align:center;color:var(--mut2)">Aucune tâche assignée pour le moment.</div>';return;}
+  const today=new Date();today.setHours(0,0,0,0);
+  const rows=ts.map(function(t){
+    var done=t.statut==='fait';
+    var late=t.echeance&&new Date(t.echeance)<today&&!done;
+    var ech=t.echeance?('📅 '+new Date(t.echeance).toLocaleDateString('fr-FR')):'';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--surface2);border:1px solid '+(late?'#c0392b55':'var(--line)')+';border-radius:12px;margin-bottom:8px">'+
+      '<input type="checkbox" '+(done?'checked':'')+' onchange="toggleMaTache(\''+t.id+'\',this.checked)" style="width:20px;height:20px;flex:0 0 auto;cursor:pointer">'+
+      '<div style="flex:1"><div style="font-weight:600;font-size:14px;'+(done?'text-decoration:line-through;color:var(--mut2)':'')+'">'+(t.titre||'—')+'</div>'+
+      (ech?'<div style="font-size:11.5px;color:'+(late?'#e06':'var(--mut2)')+';margin-top:2px">'+ech+(late?' · en retard':'')+'</div>':'')+'</div></div>';
+  }).join('');
+  el('content').innerHTML=head+rows;
+}
+async function toggleMaTache(id,done){
+  try{await sb('taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:done?'fait':'a_faire'})});}
+  catch(e){alert('Erreur : '+e.message);}
+  renderMesTaches();
+}
 async function renderTaches(){
+  if(!IS_ADMIN) return renderMesTaches();
   el('content').innerHTML=`
     <div class="toolbar" id="tf"></div>
     <div class="toolbar"><input id="tnew" placeholder="Nouvelle tâche…" style="flex:1;min-width:180px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:14px"><button class="btn sm" id="tadd" style="width:auto">+ Ajouter</button></div>
@@ -1132,8 +1155,9 @@ async function renderCalendrier(){
   const events=evs.map(function(e){return {title:e.titre,start:e.date_debut,end:e.date_fin?_addDay(e.date_fin):undefined,color:colors[e.type]||'#666',extendedProps:{note:e.note||'',id:e.id}};});
   const addBtn=IS_ADMIN?'<button class="btn sm" onclick="openEvt()">+ Ajouter</button>':'';
   el('content').innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap">'+
-      '<div style="display:flex;align-items:center;gap:14px"><span style="font-size:30px">📅</span><div><div style="font-size:23px;font-weight:800">Calendrier</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">Fermetures, événements &amp; infos partagées</div></div></div>'+addBtn+
+    '<div style="border-radius:16px;overflow:hidden;margin-bottom:16px;line-height:0;box-shadow:0 4px 16px rgba(0,0,0,.25)"><img src="./hero-rando.jpg" style="width:100%;display:block;max-height:300px;object-fit:cover;object-position:center 55%"></div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">'+
+      '<div style="font-size:19px;font-weight:800">📅 Calendrier</div>'+addBtn+
     '</div>'+
     '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--mut2)"><span><span style="display:inline-block;width:11px;height:11px;background:#c0392b;border-radius:3px;vertical-align:middle"></span> Fermeture</span><span><span style="display:inline-block;width:11px;height:11px;background:#2E75B6;border-radius:3px;vertical-align:middle"></span> Événement</span><span><span style="display:inline-block;width:11px;height:11px;background:#b8942f;border-radius:3px;vertical-align:middle"></span> Info</span></div>'+
     '<div id="cal2" style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px"></div>';
