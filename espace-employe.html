@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSVP — Area Personale</title>
+<style>
+  :root{--rsvp:#8a1c2b;--gold:#d9c27a;--ink:#222;--mut:#667;--line:#e7e3d8;--bg:#f6f3ec}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  .wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+  .logo{display:block;margin:10px auto 6px;max-width:230px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px 22px;box-shadow:0 6px 20px rgba(0,0,0,.05);margin-top:16px}
+  h1{font-size:19px;margin:0 0 4px;color:var(--rsvp)}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:22px 0 8px}
+  .sub{font-size:13px;color:var(--mut);margin-bottom:4px}
+  label{display:block;font-size:12.5px;color:var(--mut);margin:12px 0 4px}
+  input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit;background:#fbf9f4}
+  input:focus{outline:none;border-color:var(--gold);background:#fff}
+  button{width:100%;margin-top:16px;padding:12px;border:0;border-radius:9px;background:var(--rsvp);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+  button:disabled{opacity:.6;cursor:default}
+  .link{background:none;color:var(--rsvp);font-weight:600;width:auto;padding:0;margin-top:18px;text-decoration:underline;font-size:13px}
+  .err{color:#b3261e;font-size:13px;margin-top:10px;min-height:16px}
+  .ok{color:#2d7d3a}
+  .prof{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}
+  .item{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fbf9f4}
+  .item .k{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  .item .v{font-size:14px;margin-top:2px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left}
+  td.num,th.num{text-align:right}
+  .btnlink{display:inline-block;width:auto;margin-top:6px;padding:11px 16px;background:var(--gold);color:#4a3b12;border-radius:9px;font-weight:700;text-decoration:none;font-size:14px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .hi{font-size:16px;font-weight:700}
+  .logout{width:auto;background:none;color:var(--mut);text-decoration:underline;font-size:12.5px;margin:0;padding:0}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="https://nadeaunicolas-blip.github.io/HUB/logo_signature.png" alt="La Vinothèque — RSVP Club">
+
+  <!-- LOGIN -->
+  <div class="card" id="loginCard">
+    <h1>Area Personale</h1>
+    <div class="sub">Accedi con l'email e la password ricevute da Nicolas.</div>
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" placeholder="nome@rsvp-club.com">
+    <label>Password</label>
+    <input id="pwd" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button id="loginBtn">Accedi</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <!-- RESET (prima connessione) -->
+  <div class="card hidden" id="resetCard">
+    <h1>Prima connessione</h1>
+    <div class="sub">Per sicurezza, scegli una nuova password personale.</div>
+    <label>Nuova password (min. 8 caratteri)</label>
+    <input id="np1" type="password" autocomplete="new-password" placeholder="••••••••">
+    <label>Conferma password</label>
+    <input id="np2" type="password" autocomplete="new-password" placeholder="••••••••">
+    <button id="resetBtn">Salva e continua</button>
+    <div class="err" id="resetErr"></div>
+  </div>
+
+  <!-- FICHE -->
+  <div class="card hidden" id="ficheCard">
+    <div class="top">
+      <div class="hi" id="hiName"></div>
+      <button class="logout" id="logoutBtn">Esci</button>
+    </div>
+    <div class="sub" id="hiRole"></div>
+
+    <h2>La mia scheda</h2>
+    <div class="prof" id="prof"></div>
+
+    <h2>Storico dei netti</h2>
+    <div id="netsWrap"></div>
+
+    <h2>Buste paga (Google Drive)</h2>
+    <div class="sub">Le tue buste paga sono nella tua cartella Drive (accesso riservato a te).</div>
+    <a class="btnlink" id="driveBtn" target="_blank" rel="noopener">📎 Apri le mie buste paga</a>
+  </div>
+</div>
+
+<script>
+const SB="https://rdursbdlxaxrwafyyqwv.supabase.co";
+const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkdXJzYmRseGF4cndhZnl5cXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDc4NzQsImV4cCI6MjEwMDcyMzg3NH0.4wxwNnPbWsp_KVgH7GanEpKxKpg7imxyuvkDoB2UJiY";
+let TOKEN=null;
+const $=id=>document.getElementById(id);
+function show(id){["loginCard","resetCard","ficheCard"].forEach(c=>$(c).classList.toggle("hidden",c!==id));}
+
+async function login(){
+  $("loginErr").textContent="";
+  const email=$("email").value.trim(), password=$("pwd").value;
+  if(!email||!password){$("loginErr").textContent="Inserisci email e password.";return;}
+  $("loginBtn").disabled=true;
+  try{
+    const r=await fetch(SB+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({email,password})});
+    const d=await r.json();
+    if(!r.ok){$("loginErr").textContent="Email o password non validi.";$("loginBtn").disabled=false;return;}
+    TOKEN=d.access_token;
+    if(d.user&&d.user.user_metadata&&d.user.user_metadata.must_reset){show("resetCard");}
+    else{await loadFiche();}
+  }catch(e){$("loginErr").textContent="Errore di connessione.";}
+  $("loginBtn").disabled=false;
+}
+async function resetPwd(){
+  $("resetErr").textContent="";
+  const a=$("np1").value,b=$("np2").value;
+  if(a.length<8){$("resetErr").textContent="Almeno 8 caratteri.";return;}
+  if(a!==b){$("resetErr").textContent="Le password non coincidono.";return;}
+  $("resetBtn").disabled=true;
+  try{
+    const r=await fetch(SB+"/auth/v1/user",{method:"PUT",headers:{apikey:KEY,Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},body:JSON.stringify({password:a,data:{must_reset:false}})});
+    if(!r.ok){const d=await r.json().catch(()=>({}));$("resetErr").textContent=(d.msg||"Impossibile aggiornare la password.");$("resetBtn").disabled=false;return;}
+    await loadFiche();
+  }catch(e){$("resetErr").textContent="Errore di connessione.";}
+  $("resetBtn").disabled=false;
+}
+async function loadFiche(){
+  const r=await fetch(SB+"/rest/v1/employes?select=name,role,fiche,nets,drive_folder_id&limit=1",{headers:{apikey:KEY,Authorization:"Bearer "+TOKEN}});
+  const rows=await r.json();
+  if(!rows||!rows.length){show("loginCard");$("loginErr").textContent="Nessuna scheda associata a questo account.";return;}
+  const e=rows[0];
+  $("hiName").textContent=e.name;
+  $("hiRole").textContent=e.role||"";
+  $("prof").innerHTML=(e.fiche||[]).map(p=>`<div class="item"><div class="k">${p[0]}</div><div class="v">${p[1]}</div></div>`).join("");
+  // nets
+  const months=(e.nets&&e.nets.months)||[], nets=(e.nets&&e.nets.nets)||[];
+  let rowsHtml=months.map((m,i)=>{const v=nets[i];return v==null?"":`<tr><td>${m}</td><td class="num">${Number(v).toLocaleString("it-IT")} €</td></tr>`}).join("");
+  const tot=nets.reduce((a,b)=>a+(b||0),0);
+  $("netsWrap").innerHTML=rowsHtml?`<table><tr><th>Mese</th><th class="num">Netto</th></tr>${rowsHtml}<tr><td><b>Totale</b></td><td class="num"><b>${Math.round(tot).toLocaleString("it-IT")} €</b></td></tr></table>`:'<div class="sub">—</div>';
+  // drive
+  if(e.drive_folder_id){$("driveBtn").href="https://drive.google.com/drive/folders/"+e.drive_folder_id;}
+  else{$("driveBtn").style.display="none";}
+  show("ficheCard");
+}
+function logout(){TOKEN=null;$("pwd").value="";$("np1").value="";$("np2").value="";show("loginCard");}
+
+$("loginBtn").onclick=login;
+$("pwd").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
+$("resetBtn").onclick=resetPwd;
+$("logoutBtn").onclick=logout;
+</script>
+</body>
+</html>
