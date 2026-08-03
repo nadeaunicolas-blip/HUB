@@ -111,7 +111,7 @@
 <div id="login">
   <form class="loginbox" id="loginform" autocomplete="on">
     <h1>HUB</h1>
-    <p>Ta tour de contrôle · RSVP · NWS · Immobilier</p>
+    <p>Ta tour de contrôle · RSVP · NWS</p>
     <div class="field"><label>Email</label><input id="lemail" name="username" type="email" autocomplete="username" placeholder="nadeau.nicolas@gmail.com"></div>
     <div class="field"><label>Mot de passe</label><input id="lpass" name="password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
     <button class="btn" id="lbtn" type="submit">Se connecter</button>
@@ -150,9 +150,6 @@
       </div></div>
       <div class="navgroup" data-grp="mkt"><button class="navhead" onclick="toggleGrp('mkt')">Marketing<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="contenu">Contenu</a>
-      </div></div>
-      <div class="navgroup" data-grp="perso"><button class="navhead" onclick="toggleGrp('perso')">Perso<span class="chev">›</span></button><div class="navitems">
-        <a class="nav" data-view="immobilier">Immobilier</a>
       </div></div>
       <div class="navgroup" data-grp="aide"><button class="navhead" onclick="toggleGrp('aide')">Aide<span class="chev">›</span></button><div class="navitems">
         <a class="nav" data-view="guide">Guide</a>
@@ -352,7 +349,6 @@ function render(){
   if(view==='rh')return renderRH();
   if(view==='finances')return renderFinances();
   if(view==='treso')return renderTreso();
-  if(view==='immobilier')return renderImmobilier();
   if(view==='contenu')return renderContenu();
   if(view==='pilotage')return renderPilotage();
   if(view==='emailing')return renderEmailing();
@@ -360,7 +356,6 @@ function render(){
   if(view==='guide')return renderGuide();
   if(view==='agenda')return renderAgenda();
   if(view==='rsvp')return renderRsvp();
-  if(view==='perso')return renderPerso();
   if(view==='nws')return renderNws();
   if(view==='cockpit')return renderCockpit();
 }
@@ -595,7 +590,7 @@ function renderGuide(){
    '<div style="background:linear-gradient(135deg,#8a1c2b22,transparent);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px"><div style="font-size:20px;font-weight:800">📖 Mode d’emploi du HUB</div><div style="color:var(--mut);font-size:13.5px;margin-top:6px">Ton poste de pilotage : contacts, emails, campagnes, finances et agenda, au même endroit. Ci-dessous, «&nbsp;comment faire&nbsp;» pour chaque tâche. Besoin d’autre chose&nbsp;? Reviens demander à Claude.</div></div>'+
 
    sec('🏠','L’accueil (Cockpit)',
-     'La photo de la Vinothèque, ton '+b('agenda')+' du jour, et le '+b('compte à rebours objectif CA')+' (réalisé vs 473 k€). En dessous, tes '+b('3 univers')+' cliquables : '+b('RSVP')+' (tout le business), '+b('Perso')+' (Immobilier), '+b('NWS')+' (à venir). Clique un univers → tu accèdes à ses modules.')+
+     'La photo de la Vinothèque, ton '+b('agenda')+' du jour, et le '+b('compte à rebours objectif CA')+' (réalisé vs 473 k€). En dessous, tes '+b('2 univers')+' cliquables : '+b('RSVP')+' (tout le business) et '+b('NWS')+' (à venir). Clique un univers → tu accèdes à ses modules.')+
 
    sec('👤','Retrouver un contact',
      'Onglet '+b('Contacts')+'. Cherche par '+b('nom de famille')+' ou par '+b('numéro')+' (évite le prénom : trop de doublons italiens 😉). Les puces du haut filtrent par '+b('rôle')+' et par '+b('liste Brevo')+' (CCI, BNI, Vinothèque, Leads Meta…) — elles se combinent. Clique une fiche pour voir tél/email, ses listes, et son '+b('Historique des échanges')+' (emails envoyés ✉️ et reçus 📨).')+
@@ -1070,10 +1065,6 @@ async function saveTreso(){
 /* ARTIFACTS INTÉGRÉS */
 let immoSub='isa';
 function frame(src){return `<iframe src="./${src}" style="width:100%;height:calc(100vh - 160px);border:1px solid var(--line);border-radius:14px;background:#0f1420"></iframe>`;}
-function renderImmobilier(){
-  el('content').innerHTML=frame('immobilier-isa.html');
-  return;
-}
 function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
 function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
 function renderRH(){el('content').innerHTML=frame('rsvp-hr.html');}
@@ -1152,7 +1143,6 @@ async function renderCockpit(){
         '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#e7e6dd;font-weight:700;margin:0 6px 14px">Tes univers</div>'+
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">'+
           '<a onclick="nav(\'rsvp\')">'+uni('var(--rsvp)','🍷','RSVP','CRM & Ventes · Opérations · Finances · Marketing')+'</a>'+
-          '<a onclick="nav(\'perso\')">'+uni('var(--immobilier)','🏡','Perso','Immobilier & patrimoine')+'</a>'+
           '<a onclick="nav(\'nws\')">'+uni('var(--nws)','🍇','NWS','Import & négoce — à venir')+'</a>'+
         '</div>'+
       '</div>'+
@@ -1193,13 +1183,6 @@ async function renderRsvp(){
       famPanel('👥','HR','var(--rsvp)',tiles(['rh'],'var(--rsvp)'))+
       famPanel('💶','Finances','var(--warn)',tiles(['finances','treso','pilotage'],'var(--warn)'))+
       famPanel('📣','Marketing','var(--nws)',tiles(['contenu','emailing'],'var(--nws)'))+
-    '</div>';
-}
-
-async function renderPerso(){
-  el('content').innerHTML=pageHead('🏡','Perso','Immobilier & patrimoine')+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px">'+
-      famPanel('🏠','Patrimoine','var(--immobilier)',moduleTile('immobilier','🏠','Immobilier','var(--immobilier)'))+
     '</div>';
 }
 
