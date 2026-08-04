@@ -203,6 +203,15 @@ var _U="https://rdursbdlxaxrwafyyqwv.supabase.co",_ANON="eyJhbGciOiJIUzI1NiIsInR
 function _tok(){try{var s=JSON.parse(localStorage.getItem("hub_session")||"{}");return s.access_token||_ANON;}catch(e){return _ANON;}}
 var MODEL={},_UPD=null;try{var _x=new XMLHttpRequest();_x.open("GET",_U+"/rest/v1/page_data?slug=eq.pilotage&select=value,updated_at",false);_x.setRequestHeader("apikey",_ANON);_x.setRequestHeader("Authorization","Bearer "+_tok());_x.send();if(_x.status>=200&&_x.status<300){var _a=JSON.parse(_x.responseText||"[]");if(_a[0]&&_a[0].value){MODEL=_a[0].value;_UPD=_a[0].updated_at;}}}catch(e){}
 try{if(_UPD){var _d=new Date(_UPD),_s='mis à jour le '+_d.toLocaleDateString('fr-FR')+' à '+_d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});var _e1=document.getElementById('asof');if(_e1)_e1.textContent=_s;var _e2=document.getElementById('asof2');if(_e2)_e2.textContent=_s;}}catch(e){}
+// MODE MIROIR : si le Master Compta a déposé le pilotage complet (champ "full"), on l'affiche tel quel — parité exacte avec l'artifact, données derrière login.
+if(typeof MODEL.full==='string' && MODEL.full.length>100){
+  document.documentElement.style.height='100%';document.body.style.margin='0';document.body.style.height='100%';
+  var _if=document.createElement('iframe');
+  _if.style.cssText='width:100%;height:100vh;border:0;background:#fff;display:block';
+  _if.setAttribute('srcdoc', MODEL.full);
+  document.body.innerHTML='';document.body.appendChild(_if);
+  throw new Error('pilotage: mode miroir (full)');
+}
 if(!MODEL.c){document.body.innerHTML='<div style="padding:44px 28px;font-family:system-ui,Arial;color:#1F4E79;max-width:560px;margin:40px auto;text-align:center"><h2>Acc&egrave;s r&eacute;serv&eacute;</h2><div style="color:#889;font-size:14px">Cette page se charge depuis le HUB une fois connect&eacute;.</div></div>';throw new Error("pilotage: reserve");}
 if(MODEL.html)Object.keys(MODEL.html).forEach(function(k){var el=document.getElementById("mdl_"+k);if(el)el.innerHTML=MODEL.html[k];});
 

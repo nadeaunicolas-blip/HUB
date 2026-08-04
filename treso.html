@@ -301,6 +301,15 @@ const _U="https://rdursbdlxaxrwafyyqwv.supabase.co",_ANON="eyJhbGciOiJIUzI1NiIsI
 function _tok(){try{var s=JSON.parse(localStorage.getItem('hub_session')||'{}');return s.access_token||_ANON;}catch(e){return _ANON;}}
 var MODEL={};
 try{var _xm=new XMLHttpRequest();_xm.open('GET',_U+'/rest/v1/kv_store?key=eq.treso_model&select=value',false);_xm.setRequestHeader('apikey',_ANON);_xm.setRequestHeader('Authorization','Bearer '+_tok());_xm.send();if(_xm.status>=200&&_xm.status<300){var _am=JSON.parse(_xm.responseText||'[]');if(_am[0]&&_am[0].value)MODEL=_am[0].value;}}catch(e){}
+// MODE MIROIR : si le Master Compta a d\u00e9pos\u00e9 la tr\u00e9sorerie compl\u00e8te (champ "full"), on l'affiche telle quelle.
+if(typeof MODEL.full==='string' && MODEL.full.length>100){
+  document.documentElement.style.height='100%';document.body.style.margin='0';document.body.style.height='100%';
+  var _tif=document.createElement('iframe');
+  _tif.style.cssText='width:100%;height:100vh;border:0;background:#0f1420;display:block';
+  _tif.setAttribute('srcdoc', MODEL.full);
+  document.body.innerHTML='';document.body.appendChild(_tif);
+  throw new Error('treso: mode miroir (full)');
+}
 if(!MODEL.RL){document.body.innerHTML='<div style="padding:44px 28px;font-family:system-ui,Arial;color:#7a1f2b;max-width:560px;margin:40px auto;text-align:center"><h2>Acc\u00e8s r\u00e9serv\u00e9</h2><div style="color:#889;font-size:14px">Cette page se charge depuis le HUB une fois connect\u00e9.</div></div>';throw new Error('treso: acces reserve');}
 if(MODEL.narr){Object.keys(MODEL.narr).forEach(function(k){document.querySelectorAll('[data-m="'+k+'"]').forEach(function(el){el.innerHTML=MODEL.narr[k];});});}
 const RL=MODEL.RL;
