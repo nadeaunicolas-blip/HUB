@@ -913,8 +913,22 @@ function openGantt(){
   var em=encodeURIComponent((JSON.parse(localStorage.getItem('hub_session')||'{}').email)||'');
   window.open('./gantt.html#tk='+encodeURIComponent(token||'')+'&em='+em,'_blank');
 }
+let PROJ_MODE='gantt';
+function projTabs(){
+  return '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+    '<button class="btn '+(PROJ_MODE==='gantt'?'':'sec')+' sm" onclick="PROJ_MODE=\'gantt\';renderProjets()">📊 Gantt</button>'+
+    '<button class="btn '+(PROJ_MODE==='liste'?'':'sec')+' sm" onclick="PROJ_MODE=\'liste\';renderProjets()">'+(LANG==='it'?'Elenco':'Liste')+'</button>'+
+    '<a class="btn sec sm" style="text-decoration:none" href="./gantt.html#tk='+encodeURIComponent(token||'')+'&em='+encodeURIComponent((JSON.parse(localStorage.getItem('hub_session')||'{}').email)||'')+'" target="_blank" rel="noopener">⤢ '+(LANG==='it'?'Schermo intero':'Plein écran')+'</a>'+
+  '</div>';
+}
 async function renderProjets(){
-  el('content').innerHTML='<div style="margin-bottom:14px"><button class="btn" onclick="openGantt()">📊 '+(LANG==='it'?'Diagramma di Gantt':'Diagramme de Gantt')+'</button></div><div id="jlist" class="list"><div class="empty">'+T('Chargement…')+'</div></div>';
+  if(PROJ_MODE==='gantt'){
+    var em=encodeURIComponent((JSON.parse(localStorage.getItem('hub_session')||'{}').email)||'');
+    var src='./gantt.html#embed=1&tk='+encodeURIComponent(token||'')+'&em='+em;
+    el('content').innerHTML=projTabs()+'<iframe src="'+src+'" style="width:100%;height:80vh;border:1px solid var(--line);border-radius:14px;background:#fff;display:block"></iframe>';
+    return;
+  }
+  el('content').innerHTML=projTabs()+'<div id="jlist" class="list"><div class="empty">'+T('Chargement…')+'</div></div>';
   let js;try{js=await sb('projets?select=*&order=created_at.desc');}catch(e){el('jlist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
   if(!js.length){el('jlist').innerHTML='<div class="empty">Aucun projet.<br>Clique « + Nouveau ».</div>';return;}
   el('jlist').innerHTML=js.map(p=>`

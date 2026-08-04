@@ -58,6 +58,10 @@
   .gantt .bar-wrapper.p4 .bar{fill:#6b4c9a}.gantt .bar-wrapper.p4 .bar-progress{fill:#9376bd}
   .gantt .bar-wrapper.done .bar-progress{fill:#2d7d3a !important}
   .muted{color:var(--mut);font-size:12.5px}
+  body.embed{background:#fff}
+  body.embed .logo{display:none}
+  body.embed #logoutBtn{display:none}
+  body.embed .wrap{padding:6px 4px 24px;max-width:100%}
 </style>
 </head>
 <body>
@@ -373,6 +377,7 @@ document.querySelectorAll("#viewSeg button").forEach(b=>b.onclick=function(){
 (function(){
   try{
     const h=new URLSearchParams(location.hash.slice(1));
+    if(h.get("embed"))document.body.classList.add("embed");
     const tk=h.get("tk");
     if(tk){TOKEN=tk;EMAIL=h.get("em")||"";IS_ADMIN=(EMAIL===ADMIN);
       history.replaceState(null,"",location.pathname+location.search);
