@@ -1180,7 +1180,7 @@ async function saveTreso(){
 
 /* ARTIFACTS INTÉGRÉS */
 let immoSub='isa';
-function frame(src){return `<iframe src="./${src}" style="width:100%;height:calc(100vh - 160px);border:1px solid var(--line);border-radius:14px;background:#0f1420"></iframe>`;}
+function frame(src){return `<iframe src="./${src}?v=${Date.now()}" style="width:100%;height:calc(100vh - 160px);border:1px solid var(--line);border-radius:14px;background:#0f1420"></iframe>`;}
 function renderContenu(){el('content').innerHTML=frame('vinotheque.html');}
 function renderPilotage(){el('content').innerHTML=frame('pilotage.html');}
 function renderRH(){ if(IS_ADMIN){el('content').innerHTML=frame('rsvp-hr.html');} else {renderMaFiche();} }
