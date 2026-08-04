@@ -206,7 +206,7 @@ const I18N={
   'Chargement…':'Caricamento…',
   'Aucune fiche associée à ton compte.':'Nessuna scheda associata al tuo account.',
   'Historique des nets':'Storico dei netti','Mois':'Mese','Net':'Netto','Total':'Totale',
-  'Bulletins de paie':'Buste paga','Mes bulletins de paie (Drive)':'Le mie buste paga (Drive)',
+  'Bulletins de paie':'Buste paga','Mes bulletins de paie (Drive)':'Le mie buste paga (Drive)','Contrat':'Contratto','Horaire':'Orario',
   'Tes bulletins seront disponibles ici prochainement.':'Le tue buste paga saranno presto disponibili qui.',
   'Mes tâches':'Le mie attività',
   "Les tâches qui te sont assignées — coche quand c'est fait":'Le attività assegnate a te — spunta quando è fatto',
@@ -1171,15 +1171,12 @@ async function renderMaFiche(){
   let rows=[];try{rows=await sb('employes?select=name,role,fiche,nets,drive_folder_id&limit=1');}catch(e){}
   if(!rows||!rows.length){el('content').innerHTML='<div class="empty">'+T('Aucune fiche associée à ton compte.')+'</div>';return;}
   const e=rows[0];
-  const items=(e.fiche||[]).map(function(p){return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 14px;background:var(--surface2)"><div style="font-size:11px;color:var(--mut2);text-transform:uppercase;letter-spacing:.04em">'+p[0]+'</div><div style="font-size:14px;margin-top:3px">'+p[1]+'</div></div>';}).join('');
-  const months=(e.nets&&e.nets.months)||[],nets=(e.nets&&e.nets.nets)||[];
-  let rws=months.map(function(m,i){var v=nets[i];return v==null?'':'<tr><td style="padding:6px 10px;border-bottom:1px solid var(--line)">'+m+'</td><td style="padding:6px 10px;border-bottom:1px solid var(--line);text-align:right">'+Number(v).toLocaleString('fr-FR')+' €</td></tr>';}).join('');
-  const tot=nets.reduce(function(a,b){return a+(b||0);},0);
+  const KEEP=['Contrat','Horaire'];
+  const items=(e.fiche||[]).filter(function(p){return KEEP.indexOf(p[0])>=0;}).map(function(p){return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 14px;background:var(--surface2)"><div style="font-size:11px;color:var(--mut2);text-transform:uppercase;letter-spacing:.04em">'+T(p[0])+'</div><div style="font-size:14px;margin-top:3px">'+p[1]+'</div></div>';}).join('');
   const drive=e.drive_folder_id?'<a class="btn sm" style="margin-top:8px;display:inline-block" href="https://drive.google.com/drive/folders/'+e.drive_folder_id+'" target="_blank" rel="noopener">📎 '+T('Mes bulletins de paie (Drive)')+'</a>':'<div style="color:var(--mut2);font-size:13px">'+T('Tes bulletins seront disponibles ici prochainement.')+'</div>';
   el('content').innerHTML=
     '<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px"><span style="font-size:30px">👤</span><div><div style="font-size:23px;font-weight:800">'+e.name+'</div><div style="color:var(--mut2);font-size:12.5px;margin-top:3px">'+(e.role||'')+'</div></div></div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:22px">'+items+'</div>'+
-    (rws?'<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">'+T('Historique des nets')+'</h2><div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left;padding:7px 10px;background:var(--surface2)">'+T('Mois')+'</th><th style="text-align:right;padding:7px 10px;background:var(--surface2)">'+T('Net')+'</th></tr>'+rws+'<tr><td style="padding:7px 10px;font-weight:700">'+T('Total')+'</td><td style="padding:7px 10px;text-align:right;font-weight:700">'+Math.round(tot).toLocaleString('fr-FR')+' €</td></tr></table></div>':'')+
     '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut2);margin:0 0 8px">'+T('Bulletins de paie')+'</h2>'+drive;
 }
 
