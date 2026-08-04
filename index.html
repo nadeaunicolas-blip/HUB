@@ -194,6 +194,15 @@ const STAGES = [['nouveau','Nouveau'],['qualifie','Qualifié'],['proposition','P
 let token=null, email=null, view='cockpit';
 let IS_ADMIN=true;
 const ADMIN_EMAIL='nadeau.nicolas@gmail.com';
+const PEOPLE=[
+ {email:'nadeau.nicolas@gmail.com',name:'Nico'},
+ {email:'fmancasartori@gmail.com',name:'Fedro'},
+ {email:'francesco.longhi001@gmail.com',name:'Francesco'},
+ {email:'mijadimarco10@gmail.com',name:'Mija'},
+ {email:'richard.fiocchi@gmail.com',name:'Richard'}
+];
+function empName(e){var p=PEOPLE.find(function(x){return x.email===e;});return p?p.name:(e?e.split('@')[0]:'—');}
+let tPers=null;
 const EMP_VIEWS=['calendrier','rh','projets','taches','pilotage'];
 let LANG='fr';
 const I18N={
@@ -207,6 +216,7 @@ const I18N={
   'Aucune fiche associée à ton compte.':'Nessuna scheda associata al tuo account.',
   'Historique des nets':'Storico dei netti','Mois':'Mese','Net':'Netto','Total':'Totale',
   'Bulletins de paie':'Buste paga','Mes bulletins de paie (Drive)':'Le mie buste paga (Drive)','Contrat':'Contratto','Horaire':'Orario',
+  'À faire':'Da fare','En cours':'In corso','Fait':'Fatto','retard':'in ritardo','Nouvelle tâche…':'Nuova attività…','Ajouter':'Aggiungi','Chargement…':'Caricamento…',
   'Tes bulletins seront disponibles ici prochainement.':'Le tue buste paga saranno presto disponibili qui.',
   'Mes tâches':'Le mie attività',
   "Les tâches qui te sont assignées — coche quand c'est fait":'Le attività assegnate a te — spunta quando è fatto',
@@ -1005,35 +1015,39 @@ async function toggleMaTache(id,done){
   renderMesTaches();
 }
 async function renderTaches(){
-  if(!IS_ADMIN) return renderMesTaches();
   el('content').innerHTML=`
+    <div class="toolbar" id="tpers"></div>
     <div class="toolbar" id="tf"></div>
-    <div class="toolbar"><input id="tnew" placeholder="Nouvelle tâche…" style="flex:1;min-width:180px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:14px"><button class="btn sm" id="tadd" style="width:auto">+ Ajouter</button></div>
-    <div id="kb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start"><div class="empty">Chargement…</div></div>`;
-  el('tf').innerHTML='<span class="chip '+(!tPil?'on':'')+'" data-p="">Tous piliers</span>'+PILIERS.map(([k,l])=>`<span class="chip ${tPil===k?'on':''}" data-p="${k}">${l}</span>`).join('');
+    ${IS_ADMIN?`<div class="toolbar"><input id="tnew" placeholder="${T('Nouvelle tâche…')}" style="flex:1;min-width:180px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:14px"><button class="btn sm" id="tadd" style="width:auto">+ ${T('Ajouter')}</button></div>`:''}
+    <div id="kb" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start"><div class="empty">${T('Chargement…')}</div></div>`;
+  el('tpers').innerHTML='<span class="chip '+(!tPers?'on':'')+'" data-pe="">'+(LANG==='it'?'Tutta la squadra':"Toute l'équipe")+'</span>'+PEOPLE.map(function(p){return '<span class="chip '+(tPers===p.email?'on':'')+'" data-pe="'+p.email+'">'+p.name+'</span>';}).join('');
+  el('tpers').querySelectorAll('[data-pe]').forEach(function(c){c.onclick=function(){tPers=c.dataset.pe||null;renderTaches();};});
+  el('tf').innerHTML='<span class="chip '+(!tPil?'on':'')+'" data-p="">'+(LANG==='it'?'Tutti i pilastri':'Tous piliers')+'</span>'+PILIERS.map(([k,l])=>`<span class="chip ${tPil===k?'on':''}" data-p="${k}">${l}</span>`).join('');
   el('tf').querySelectorAll('[data-p]').forEach(c=>c.onclick=()=>{tPil=c.dataset.p||null;renderTaches();});
-  el('tadd').onclick=addQuickTache;
-  el('tnew').addEventListener('keydown',e=>{if(e.key==='Enter')addQuickTache();});
+  if(IS_ADMIN){el('tadd').onclick=addQuickTache;el('tnew').addEventListener('keydown',e=>{if(e.key==='Enter')addQuickTache();});}
   let ts;try{ts=await sb('taches?select=*&order=priorite.asc,echeance.asc.nullslast&limit=1000');}catch(e){el('kb').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
   if(tPil)ts=ts.filter(t=>t.pilier===tPil);
+  if(tPers)ts=ts.filter(t=>t.assignee_email===tPers);
   const today=new Date();today.setHours(0,0,0,0);
   el('kb').innerHTML=KCOLS.map(([st,lab])=>{
     const items=ts.filter(t=>t.statut===st);
     return `<div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;min-height:80px">
-      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;padding:4px 6px 10px;display:flex;justify-content:space-between"><span>${lab}</span><span>${items.length}</span></div>
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut2);font-weight:700;padding:4px 6px 10px;display:flex;justify-content:space-between"><span>${T(lab)}</span><span>${items.length}</span></div>
       ${items.map(t=>{
         const late=t.echeance&&new Date(t.echeance)<today&&st!=='fait';
-        return `<div class="item" style="margin-bottom:8px;display:block;cursor:pointer" onclick='openTache(${JSON.stringify(t).replace(/'/g,"&#39;")})'>
+        const mine=IS_ADMIN||t.assignee_email===email;
+        return `<div class="item" style="margin-bottom:8px;display:block;${IS_ADMIN?'cursor:pointer':''}" ${IS_ADMIN?`onclick='openTache(${JSON.stringify(t).replace(/'/g,"&#39;")})'`:''}>
           <div class="n" style="font-size:13.5px;${st==='fait'?'text-decoration:line-through;color:var(--mut2)':''}">${t.titre}</div>
           <div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">
+            ${t.assignee_email?`<span class="tg" style="background:var(--rsvp)18;color:var(--rsvp)">👤 ${empName(t.assignee_email)}</span>`:''}
             ${t.pilier?`<span class="tg" style="background:${PIL_COLOR[t.pilier]}22;color:${PIL_COLOR[t.pilier]}">${t.pilier}</span>`:''}
             <span class="tg" style="background:${PRIO_COLOR[t.priorite]}22;color:${PRIO_COLOR[t.priorite]}">${(t.priorite||'p4').toUpperCase()}</span>
-            ${t.echeance?`<span class="tg" style="background:${late?'#e6676722':'#8a897f22'};color:${late?'var(--crit)':'var(--mut)'}">${new Date(t.echeance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}${late?' ·retard':''}</span>`:''}
+            ${t.echeance?`<span class="tg" style="background:${late?'#e6676722':'#8a897f22'};color:${late?'var(--crit)':'var(--mut)'}">${new Date(t.echeance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}${late?' ·'+T('retard'):''}</span>`:''}
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px">
+          ${mine?`<div style="display:flex;gap:6px;margin-top:8px">
             ${st!=='a_faire'?`<button class="chip" style="padding:4px 10px" onclick='event.stopPropagation();moveTache("${t.id}","${prevStatut(st)}")'>←</button>`:''}
-            ${st!=='fait'?`<button class="chip" style="padding:4px 10px" onclick='event.stopPropagation();moveTache("${t.id}","${nextStatut(st)}")'>${st==='en_cours'?'✓ Fait':'→'}</button>`:''}
-          </div>
+            ${st!=='fait'?`<button class="chip" style="padding:4px 10px" onclick='event.stopPropagation();moveTache("${t.id}","${nextStatut(st)}")'>${st==='en_cours'?'✓ '+T('Fait'):'→'}</button>`:''}
+          </div>`:''}
         </div>`;
       }).join('')||'<div class="muted" style="font-size:12px;padding:6px">—</div>'}
     </div>`;
@@ -1042,7 +1056,7 @@ async function renderTaches(){
 function nextStatut(s){return s==='a_faire'?'en_cours':'fait';}
 function prevStatut(s){return s==='fait'?'en_cours':'a_faire';}
 async function moveTache(id,st){try{await sb('taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:st})});renderTaches();}catch(e){alert(e.message);}}
-async function addQuickTache(){const v=el('tnew').value.trim();if(!v)return;try{await sb('taches',{method:'POST',prefer:'return=minimal',body:JSON.stringify({titre:v,statut:'a_faire',priorite:'p3',pilier:tPil||null})});el('tnew').value='';renderTaches();}catch(e){alert('Erreur : '+e.message);}}
+async function addQuickTache(){const v=el('tnew').value.trim();if(!v)return;var who=IS_ADMIN?(tPers||email):email;try{await sb('taches',{method:'POST',prefer:'return=minimal',body:JSON.stringify({titre:v,statut:'a_faire',priorite:'p3',pilier:tPil||'rsvp',assignee_email:who})});el('tnew').value='';renderTaches();}catch(e){alert('Erreur : '+e.message);}}
 async function toggleTache(id,st){try{await sb('taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:st})});renderTaches();}catch(e){alert(e.message);}}
 function openTache(t){
   t=t||{};const isEdit=!!t.id;
