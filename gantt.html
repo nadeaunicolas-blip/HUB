@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSVP — Diagramma di Gantt</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.css">
+<style>
+  :root{--rsvp:#8a1c2b;--gold:#d9c27a;--ink:#222;--mut:#667;--line:#e7e3d8;--bg:#f6f3ec;--surface:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
+  .logo{display:block;margin:6px auto 2px;max-width:190px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 6px 20px rgba(0,0,0,.05);margin-top:14px;max-width:460px;margin-left:auto;margin-right:auto}
+  h1{font-size:19px;margin:0 0 4px;color:var(--rsvp)}
+  .sub{font-size:13px;color:var(--mut);margin-bottom:4px}
+  label{display:block;font-size:12.5px;color:var(--mut);margin:12px 0 4px}
+  input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit;background:#fbf9f4}
+  input:focus,select:focus{outline:none;border-color:var(--gold);background:#fff}
+  button{padding:10px 14px;border:0;border-radius:9px;background:var(--rsvp);color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+  button.ghost{background:#fff;color:var(--rsvp);border:1px solid var(--line)}
+  button.gold{background:var(--gold);color:#4a3b12}
+  button:disabled{opacity:.55;cursor:default}
+  .err{color:#b3261e;font-size:13px;margin-top:10px;min-height:16px}
+  .hidden{display:none}
+  .bigbtn{width:100%;margin-top:16px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:8px 0 14px}
+  .title{font-size:20px;font-weight:800;color:var(--rsvp)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:10px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .ganttbox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;overflow-x:auto}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{background:#fff;color:var(--mut);border-radius:0;font-weight:600;padding:8px 12px}
+  .seg button.on{background:var(--rsvp);color:#fff}
+  /* Drawer */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:40}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(400px,92vw);background:#fff;box-shadow:-8px 0 30px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .22s;z-index:50;display:flex;flex-direction:column}
+  .drawer.open{transform:none}
+  .drawer .hd{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .drawer .bd{padding:16px 18px;overflow-y:auto;flex:1}
+  .drawer .ft{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:space-between}
+  .x{background:none;color:var(--mut);font-size:22px;padding:0;line-height:1}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:#f0ece1;color:#5a4b2a;margin-bottom:6px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:.96}
+  /* Gantt bar tweaks */
+  .gantt .bar-wrapper .bar{ry:4;rx:4}
+  .gantt .bar-label{font-size:12px;font-weight:600}
+  .gantt .bar-wrapper.proj-header .bar{fill:#3a3a3a;opacity:.9}
+  .gantt .bar-wrapper.proj-header .bar-progress{fill:#666}
+  .gantt .bar-wrapper.proj-header .bar-label{fill:#fff;font-weight:800}
+  .gantt .bar-wrapper.p0 .bar{fill:#8a1c2b}.gantt .bar-wrapper.p0 .bar-progress{fill:#b84658}
+  .gantt .bar-wrapper.p1 .bar{fill:#2E75B6}.gantt .bar-wrapper.p1 .bar-progress{fill:#5b9bd5}
+  .gantt .bar-wrapper.p2 .bar{fill:#b8942f}.gantt .bar-wrapper.p2 .bar-progress{fill:#d6b85e}
+  .gantt .bar-wrapper.p3 .bar{fill:#2d7d3a}.gantt .bar-wrapper.p3 .bar-progress{fill:#57a862}
+  .gantt .bar-wrapper.p4 .bar{fill:#6b4c9a}.gantt .bar-wrapper.p4 .bar-progress{fill:#9376bd}
+  .gantt .bar-wrapper.done .bar-progress{fill:#2d7d3a !important}
+  .muted{color:var(--mut);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="./logo_signature.png" alt="RSVP" onerror="this.style.display='none'">
+
+  <!-- LOGIN -->
+  <div class="card" id="loginCard">
+    <h1>Diagramma di Gantt — RSVP</h1>
+    <div class="sub">Accedi con l'email e la password del tuo account HUB.</div>
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" placeholder="nome@rsvp-club.com">
+    <label>Password</label>
+    <input id="pwd" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button id="loginBtn" class="bigbtn">Accedi</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <!-- RESET -->
+  <div class="card hidden" id="resetCard">
+    <h1>Prima connessione</h1>
+    <div class="sub">Per sicurezza, scegli una nuova password personale.</div>
+    <label>Nuova password (min. 8 caratteri)</label>
+    <input id="np1" type="password" autocomplete="new-password">
+    <label>Conferma password</label>
+    <input id="np2" type="password" autocomplete="new-password">
+    <button id="resetBtn" class="bigbtn">Salva e continua</button>
+    <div class="err" id="resetErr"></div>
+  </div>
+
+  <!-- APP -->
+  <div class="hidden" id="app">
+    <div class="topbar">
+      <div class="title">📊 Progetti — Gantt</div>
+      <div class="toolbar">
+        <div class="seg" id="viewSeg">
+          <button data-v="Day">Giorno</button>
+          <button data-v="Week" class="on">Settimana</button>
+          <button data-v="Month">Mese</button>
+        </div>
+        <button class="ghost" id="addTaskBtn">+ Attività</button>
+        <button class="ghost adminonly" id="addProjBtn">+ Progetto</button>
+        <button class="x" id="logoutBtn" title="Esci" style="font-size:14px;color:var(--mut)">Esci</button>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="ganttbox"><svg id="gantt"></svg></div>
+    <div class="muted" style="margin-top:10px">Trascina una barra per spostarla, tira i bordi per cambiarne la durata, clicca per modificare. Le modifiche sono salvate in tempo reale sull'HUB.</div>
+  </div>
+</div>
+
+<!-- DRAWER edit -->
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer">
+  <div class="hd"><div style="font-weight:800" id="dTitle">Attività</div><button class="x" id="dClose">×</button></div>
+  <div class="bd">
+    <div class="pill" id="dProj"></div>
+    <label>Titolo</label>
+    <input id="fTitre">
+    <label>Responsabile</label>
+    <select id="fAssignee"></select>
+    <label>Progetto</label>
+    <select id="fProjet"></select>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label>Inizio</label><input id="fStart" type="date"></div>
+      <div style="flex:1"><label>Fine</label><input id="fEnd" type="date"></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label>Stato</label><select id="fStatut">
+        <option value="a_faire">Da fare</option><option value="en_cours">In corso</option>
+        <option value="fait">Fatto</option><option value="annule">Annullato</option>
+      </select></div>
+      <div style="flex:1"><label>Priorità</label><select id="fPrio">
+        <option value="p1">P1 · alta</option><option value="p2">P2</option>
+        <option value="p3">P3</option><option value="p4">P4 · bassa</option>
+      </select></div>
+    </div>
+    <div class="err" id="dErr"></div>
+  </div>
+  <div class="ft">
+    <button class="ghost adminonly" id="dDelete" style="color:#b3261e;border-color:#f0c9c9">Elimina</button>
+    <button class="gold" id="dSave" style="flex:1">Salva</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
+<script>
+const SB="https://rdursbdlxaxrwafyyqwv.supabase.co";
+const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkdXJzYmRseGF4cndhZnl5cXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDc4NzQsImV4cCI6MjEwMDcyMzg3NH0.4wxwNnPbWsp_KVgH7GanEpKxKpg7imxyuvkDoB2UJiY";
+const ADMIN="nadeau.nicolas@gmail.com";
+const PEOPLE=[
+ {email:"nadeau.nicolas@gmail.com",name:"Nicolas"},
+ {email:"fedro@rsvp-club.com",name:"Fedro"},
+ {email:"francesco@rsvp-club.com",name:"Francesco"},
+ {email:"mijadimarco10@gmail.com",name:"Mija"},
+ {email:"richard.fiocchi@icloud.com",name:"Richard"}
+];
+const nameOf=e=>{const p=PEOPLE.find(x=>x.email===e);return p?p.name:(e||"—");};
+let TOKEN=null, EMAIL=null, IS_ADMIN=false, VIEW="Week";
+let PROJETS=[], TACHES=[], gantt=null, curId=null;
+const $=id=>document.getElementById(id);
+function show(id){["loginCard","resetCard","app"].forEach(c=>$(c).classList.toggle("hidden",c!==id));}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
+function ymd(d){return (typeof d==="string")?d.slice(0,10):new Date(d).toISOString().slice(0,10);}
+function addDays(s,n){const dt=new Date(s+"T00:00:00");dt.setDate(dt.getDate()+n);return dt.toISOString().slice(0,10);}
+
+async function api(path,opts){
+  opts=opts||{};
+  const h={apikey:KEY,Authorization:"Bearer "+TOKEN};
+  if(opts.body){h["Content-Type"]="application/json";h["Prefer"]="return=representation";}
+  const r=await fetch(SB+"/rest/v1/"+path,{method:opts.method||"GET",headers:h,body:opts.body});
+  if(!r.ok){const tx=await r.text();throw new Error(tx||("HTTP "+r.status));}
+  const ct=r.headers.get("content-type")||"";
+  return ct.includes("json")?r.json():null;
+}
+
+/* ---------- AUTH ---------- */
+async function login(){
+  $("loginErr").textContent="";
+  const email=$("email").value.trim(), password=$("pwd").value;
+  if(!email||!password){$("loginErr").textContent="Inserisci email e password.";return;}
+  $("loginBtn").disabled=true;
+  try{
+    const r=await fetch(SB+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({email,password})});
+    const d=await r.json();
+    if(!r.ok){$("loginErr").textContent="Email o password non validi.";$("loginBtn").disabled=false;return;}
+    TOKEN=d.access_token; EMAIL=(d.user&&d.user.email)||email; IS_ADMIN=(EMAIL===ADMIN);
+    if(d.user&&d.user.user_metadata&&d.user.user_metadata.must_reset){show("resetCard");}
+    else{await boot();}
+  }catch(e){$("loginErr").textContent="Errore di connessione.";}
+  $("loginBtn").disabled=false;
+}
+async function resetPwd(){
+  $("resetErr").textContent="";
+  const a=$("np1").value,b=$("np2").value;
+  if(a.length<8){$("resetErr").textContent="Almeno 8 caratteri.";return;}
+  if(a!==b){$("resetErr").textContent="Le password non coincidono.";return;}
+  $("resetBtn").disabled=true;
+  try{
+    const r=await fetch(SB+"/auth/v1/user",{method:"PUT",headers:{apikey:KEY,Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},body:JSON.stringify({password:a,data:{must_reset:false}})});
+    if(!r.ok){$("resetErr").textContent="Impossibile aggiornare la password.";$("resetBtn").disabled=false;return;}
+    await boot();
+  }catch(e){$("resetErr").textContent="Errore di connessione.";}
+  $("resetBtn").disabled=false;
+}
+
+/* ---------- DATA ---------- */
+async function boot(){
+  show("app");
+  document.querySelectorAll(".adminonly").forEach(el=>el.style.display=IS_ADMIN?"":"none");
+  await reload();
+}
+async function reload(){
+  PROJETS=await api("projets?select=id,nom,date_debut,date_echeance&order=date_debut.asc");
+  TACHES=await api("taches?select=id,titre,projet_id,assignee_email,date_debut,echeance,statut,priorite&not.projet_id=is.null&order=date_debut.asc");
+  buildLegend(); draw();
+}
+function projColor(i){return "p"+(i%5);}
+function statutProgress(s){return s==="fait"?100:(s==="en_cours"?50:0);}
+
+function buildLegend(){
+  let h=PROJETS.map((p,i)=>'<span><span class="dot" style="background:'+["#8a1c2b","#2E75B6","#b8942f","#2d7d3a","#6b4c9a"][i%5]+'"></span>'+p.nom+'</span>').join("");
+  $("legend").innerHTML=h;
+}
+
+function draw(){
+  const tasks=[];
+  const pIndex={}; PROJETS.forEach((p,i)=>pIndex[p.id]=i);
+  // group tasks by project, in project order
+  PROJETS.forEach((p,i)=>{
+    const kids=TACHES.filter(t=>t.projet_id===p.id);
+    if(!kids.length) return;
+    let mn=null,mx=null,prog=0;
+    kids.forEach(t=>{const s=ymd(t.date_debut||t.echeance),e=ymd(t.echeance||t.date_debut);if(!mn||s<mn)mn=s;if(!mx||e>mx)mx=e;prog+=statutProgress(t.statut);});
+    tasks.push({id:"P_"+p.id,name:p.nom,start:mn,end:mx,progress:Math.round(prog/kids.length),custom_class:"proj-header",_proj:true});
+    kids.forEach(t=>{
+      let s=ymd(t.date_debut||t.echeance), e=ymd(t.echeance||t.date_debut);
+      if(e<=s) e=addDays(s,1);
+      tasks.push({id:t.id,name:t.titre+" · "+nameOf(t.assignee_email),start:s,end:e,progress:statutProgress(t.statut),custom_class:projColor(i)+(t.statut==="fait"?" done":"")});
+    });
+  });
+  if(!tasks.length){$("gantt").innerHTML="";return;}
+  $("gantt").innerHTML="";
+  gantt=new Gantt("#gantt",tasks,{
+    view_mode:VIEW, language:"it", bar_height:22, padding:16,
+    date_format:"YYYY-MM-DD",
+    custom_popup_html:function(t){
+      if(t._proj) return '<div style="padding:8px 12px"><b>'+t.name+'</b><br><span style="font-size:12px;color:#ccc">Progetto · '+t.progress+'%</span></div>';
+      const tk=TACHES.find(x=>x.id===t.id)||{};
+      return '<div style="padding:8px 12px;min-width:180px"><b>'+t.name+'</b><br><span style="font-size:12px;color:#ddd">'+t.start+' → '+t.end+'</span><br><span style="font-size:12px;color:#ddd">Stato: '+statutLabel(tk.statut)+'</span></div>';
+    },
+    on_click:function(t){ if(!t._proj) openDrawer(t.id); },
+    on_date_change:function(t,start,end){ if(t._proj){draw();return;} saveDates(t.id,ymd(start),ymd(end)); },
+    on_progress_change:function(t,prog){ if(t._proj)return; const st=prog>=100?"fait":(prog>0?"en_cours":"a_faire"); saveField(t.id,{statut:st}); }
+  });
+}
+function statutLabel(s){return {a_faire:"Da fare",en_cours:"In corso",fait:"Fatto",annule:"Annullato"}[s]||s;}
+
+/* ---------- SAVE ---------- */
+function canEdit(id){const t=TACHES.find(x=>x.id===id);return IS_ADMIN||(t&&t.assignee_email===EMAIL);}
+async function saveDates(id,start,end){
+  if(!canEdit(id)){toast("Puoi modificare solo le tue attività.");draw();return;}
+  try{
+    await api("taches?id=eq."+id,{method:"PATCH",body:JSON.stringify({date_debut:start,echeance:end+"T18:00:00+02:00"})});
+    const t=TACHES.find(x=>x.id===id); if(t){t.date_debut=start;t.echeance=end+"T18:00:00+02:00";}
+    toast("Salvato ✓");
+  }catch(e){toast("Errore di salvataggio");draw();}
+}
+async function saveField(id,patch){
+  if(!canEdit(id)){toast("Puoi modificare solo le tue attività.");draw();return;}
+  try{
+    await api("taches?id=eq."+id,{method:"PATCH",body:JSON.stringify(patch)});
+    const t=TACHES.find(x=>x.id===id); if(t)Object.assign(t,patch);
+    toast("Salvato ✓");
+  }catch(e){toast("Errore di salvataggio");}
+}
+
+/* ---------- DRAWER ---------- */
+function fillSelects(){
+  $("fAssignee").innerHTML=PEOPLE.map(p=>'<option value="'+p.email+'">'+p.name+'</option>').join("");
+  $("fProjet").innerHTML=PROJETS.map(p=>'<option value="'+p.id+'">'+p.nom+'</option>').join("");
+}
+function openDrawer(id){
+  const t=TACHES.find(x=>x.id===id); if(!t)return;
+  curId=id; fillSelects();
+  const p=PROJETS.find(x=>x.id===t.projet_id);
+  $("dTitle").textContent="Modifica attività";
+  $("dProj").textContent=p?p.nom:"";
+  $("fTitre").value=t.titre||"";
+  $("fAssignee").value=t.assignee_email||PEOPLE[0].email;
+  $("fProjet").value=t.projet_id||"";
+  $("fStart").value=ymd(t.date_debut||t.echeance);
+  $("fEnd").value=ymd(t.echeance||t.date_debut);
+  $("fStatut").value=t.statut||"a_faire";
+  $("fPrio").value=t.priorite||"p3";
+  $("dErr").textContent="";
+  const ed=canEdit(id);
+  ["fTitre","fAssignee","fProjet","fStart","fEnd","fStatut","fPrio"].forEach(f=>$(f).disabled=!ed&&!IS_ADMIN);
+  $("dSave").style.display=(ed||IS_ADMIN)?"":"none";
+  $("dDelete").style.display=IS_ADMIN?"":"none";
+  openScrim(true);
+}
+function openNew(){
+  if(!IS_ADMIN){toast("Solo Nicolas può aggiungere attività.");return;}
+  curId=null; fillSelects();
+  $("dTitle").textContent="Nuova attività";
+  $("dProj").textContent="";
+  $("fTitre").value=""; $("fAssignee").value=PEOPLE[0].email;
+  $("fProjet").value=PROJETS[0]?PROJETS[0].id:"";
+  const today=new Date().toISOString().slice(0,10);
+  $("fStart").value=today; $("fEnd").value=addDays(today,3);
+  $("fStatut").value="a_faire"; $("fPrio").value="p3"; $("dErr").textContent="";
+  ["fTitre","fAssignee","fProjet","fStart","fEnd","fStatut","fPrio"].forEach(f=>$(f).disabled=false);
+  $("dSave").style.display=""; $("dDelete").style.display="none";
+  openScrim(true);
+}
+function openScrim(o){$("scrim").style.display=o?"block":"none";$("drawer").classList.toggle("open",o);}
+function closeDrawer(){openScrim(false);curId=null;}
+
+async function saveDrawer(){
+  $("dErr").textContent="";
+  const titre=$("fTitre").value.trim();
+  if(!titre){$("dErr").textContent="Il titolo è obbligatorio.";return;}
+  let s=$("fStart").value, e=$("fEnd").value;
+  if(!s||!e){$("dErr").textContent="Date obbligatorie.";return;}
+  if(e<s){e=s;}
+  const body={titre:titre,assignee_email:$("fAssignee").value,projet_id:$("fProjet").value,
+    date_debut:s,echeance:e+"T18:00:00+02:00",statut:$("fStatut").value,priorite:$("fPrio").value};
+  $("dSave").disabled=true;
+  try{
+    if(curId){
+      if(!canEdit(curId)&&!IS_ADMIN){toast("Non autorizzato.");$("dSave").disabled=false;return;}
+      await api("taches?id=eq."+curId,{method:"PATCH",body:JSON.stringify(body)});
+    }else{
+      body.pilier="rsvp";
+      await api("taches",{method:"POST",body:JSON.stringify(body)});
+    }
+    closeDrawer(); await reload(); toast("Salvato ✓");
+  }catch(err){$("dErr").textContent="Errore: "+(err.message||"salvataggio non riuscito").slice(0,120);}
+  $("dSave").disabled=false;
+}
+async function deleteTask(){
+  if(!curId||!IS_ADMIN)return;
+  if(!confirm("Eliminare questa attività?"))return;
+  try{await api("taches?id=eq."+curId,{method:"DELETE"});closeDrawer();await reload();toast("Eliminata");}
+  catch(e){toast("Errore eliminazione");}
+}
+async function addProject(){
+  if(!IS_ADMIN)return;
+  const nom=prompt("Nome del nuovo progetto:");if(!nom)return;
+  const d1=prompt("Data inizio (AAAA-MM-GG):",new Date().toISOString().slice(0,10));if(!d1)return;
+  const d2=prompt("Data fine (AAAA-MM-GG):",addDays(d1,30))||addDays(d1,30);
+  try{await api("projets",{method:"POST",body:JSON.stringify({nom:nom,pilier:"rsvp",statut:"en_cours",date_debut:d1,date_echeance:d2,devise:"EUR"})});await reload();toast("Progetto creato ✓");}
+  catch(e){toast("Errore: "+(e.message||"").slice(0,80));}
+}
+
+/* ---------- WIRING ---------- */
+$("loginBtn").onclick=login;
+$("pwd").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
+$("resetBtn").onclick=resetPwd;
+$("logoutBtn").onclick=()=>{TOKEN=null;$("pwd").value="";show("loginCard");};
+$("addTaskBtn").onclick=openNew;
+$("addProjBtn").onclick=addProject;
+$("dClose").onclick=closeDrawer; $("scrim").onclick=closeDrawer;
+$("dSave").onclick=saveDrawer; $("dDelete").onclick=deleteTask;
+document.querySelectorAll("#viewSeg button").forEach(b=>b.onclick=function(){
+  document.querySelectorAll("#viewSeg button").forEach(x=>x.classList.remove("on"));
+  this.classList.add("on"); VIEW=this.dataset.v; if(gantt)gantt.change_view_mode(VIEW);
+});
+
+/* SSO dall'HUB: token passato nel fragment (#tk=...&em=...), mai inviato al server */
+(function(){
+  try{
+    const h=new URLSearchParams(location.hash.slice(1));
+    const tk=h.get("tk");
+    if(tk){TOKEN=tk;EMAIL=h.get("em")||"";IS_ADMIN=(EMAIL===ADMIN);
+      history.replaceState(null,"",location.pathname+location.search);
+      boot().catch(function(){show("loginCard");});}
+  }catch(e){}
+})();
+</script>
+</body>
+</html>

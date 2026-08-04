@@ -909,8 +909,12 @@ async function saveOppo(id){
 async function delOppo(id){if(!confirm('Supprimer ?'))return;try{await sb('opportunites?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});closeModal();renderPipeline();}catch(e){alert(e.message);}}
 
 /* PROJETS */
+function openGantt(){
+  var em=encodeURIComponent((JSON.parse(localStorage.getItem('hub_session')||'{}').email)||'');
+  window.open('./gantt.html#tk='+encodeURIComponent(token||'')+'&em='+em,'_blank');
+}
 async function renderProjets(){
-  el('content').innerHTML='<div id="jlist" class="list"><div class="empty">Chargement…</div></div>';
+  el('content').innerHTML='<div style="margin-bottom:14px"><button class="btn" onclick="openGantt()">📊 '+(LANG==='it'?'Diagramma di Gantt':'Diagramme de Gantt')+'</button></div><div id="jlist" class="list"><div class="empty">'+T('Chargement…')+'</div></div>';
   let js;try{js=await sb('projets?select=*&order=created_at.desc');}catch(e){el('jlist').innerHTML='<div class="empty">Erreur de lecture.</div>';return;}
   if(!js.length){el('jlist').innerHTML='<div class="empty">Aucun projet.<br>Clique « + Nouveau ».</div>';return;}
   el('jlist').innerHTML=js.map(p=>`
