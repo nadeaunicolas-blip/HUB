@@ -64,6 +64,7 @@
   .loading{color:var(--muted);font-style:italic;padding:10px 12px}
   .err{color:var(--bad);padding:10px 12px;font-size:12.5px}
   .chartbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;height:180px;margin-bottom:14px;position:relative}
+  .btnlink{display:inline-block;margin-top:8px;padding:9px 14px;background:#d9c27a;color:#4a3b12;border-radius:9px;font-weight:700;text-decoration:none;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -175,12 +176,12 @@ function makeChart(key){
 }
 async function buildEmployee(key){
   const p=PROFILES[key],el=document.getElementById(key);
+  const KEEP=["Contrat","Horaire"];
+  const items=(p.items||[]).filter(([k,v])=>KEEP.includes(k));
+  const folderLink=p.folder?`<a class="btnlink" href="https://drive.google.com/drive/folders/${p.folder}" target="_blank" rel="noopener">📂 Ouvrir le dossier Drive (fiches de paie)</a>`:"";
   el.innerHTML=`<h2>${p.name}</h2>
-    <div class="profile">${p.items.map(([k,v])=>`<div class="item"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")}</div>
-    <div class="chartbox"><canvas id="ch_${key}"></canvas></div>
-    <h2>📎 Documents (Google Drive)</h2><div class="doclist" id="docs_${key}"><div class="loading">Chargement…</div></div>
-    <h2>💶 Historique des nets</h2>${netTable(key)}`;
-  makeChart(key);
+    <div class="profile">${items.map(([k,v])=>`<div class="item"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")}</div>
+    <h2>💶 Fiches de paie (Google Drive)</h2><div class="doclist" id="docs_${key}"><div class="loading">Chargement…</div></div>`;
   try{
     let files=[];
     for(const src of (DOCS[key]||[])){
@@ -190,7 +191,7 @@ async function buildEmployee(key){
     const finaux=await drive(`parentId = '${F.pdfFinaux}'`);
     files=files.concat(finaux.filter(f=>f.title.startsWith(p.buste)));
     renderDocs(document.getElementById("docs_"+key),files.filter(f=>f.mimeType!=="application/vnd.google-apps.folder"));
-  }catch(e){document.getElementById("docs_"+key).innerHTML=`<div class="err">Connecteur Google Drive indisponible (${e.message}). Recharge la vue.</div>`}
+  }catch(e){document.getElementById("docs_"+key).innerHTML=`<div style="color:#555;font-size:13px;line-height:1.5">L'aperçu en direct des documents n'est disponible que dans l'app Cowork. ${folderLink||"Ouvre le dossier Drive de l'employé pour les fiches de paie."}</div>`}
 }
 function buildOverview(){
   const keys=["fedro","richard","francesco","margot","mija"];
@@ -243,13 +244,13 @@ const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 async function loadEmployes(){
   let tok=null; try{const s=JSON.parse(localStorage.getItem("hub_session")||"null"); tok=s&&s.access_token;}catch(e){}
   if(!tok) throw new Error("session HUB introuvable");
-  const r=await fetch(SB_URL+"/rest/v1/employes?select=emp_key,name,role,fiche,nets,buste_prefix&order=emp_key",{headers:{apikey:SB_KEY,Authorization:"Bearer "+tok}});
+  const r=await fetch(SB_URL+"/rest/v1/employes?select=emp_key,name,role,fiche,nets,buste_prefix,drive_folder_id&order=emp_key",{headers:{apikey:SB_KEY,Authorization:"Bearer "+tok}});
   if(!r.ok) throw new Error("HTTP "+r.status);
   const rows=await r.json();
   if(!rows.length) throw new Error("aucune donnée (accès non autorisé)");
   rows.forEach(e=>{
     NETS[e.emp_key]=(e.nets&&e.nets.nets)||[];
-    PROFILES[e.emp_key]={name:e.name+(e.role?" — "+e.role:""),items:e.fiche||[],buste:e.buste_prefix};
+    PROFILES[e.emp_key]={name:e.name+(e.role?" — "+e.role:""),items:e.fiche||[],buste:e.buste_prefix,folder:e.drive_folder_id};
   });
 }
 (async()=>{
